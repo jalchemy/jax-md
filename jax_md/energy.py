@@ -1678,9 +1678,13 @@ def load_lammps_eam_parameters_alloy(
     Callable[[Array], Array], Callable[[Array], Array], Callable[[Array], Array], float
 ]:
     raw_text = file.read().split("\n")
+    # for i, line in enumerate(raw_text[:10]):
+    # print(f"line {i}: {line}")
     if "setfl" not in raw_text[0]:
         raise ValueError("File format is incorrect, expected LAMMPS setfl format.")
-    species_count, *elements = raw_text[3].split()
+    species_count, *elements = [
+        int(v) if i == 0 else i for i, v in enumerate(raw_text[3].split())
+    ]
     temp_params = raw_text[4].split()
     num_drho, drho, num_dr, dr, cutoff = (
         int(temp_params[0]),
@@ -1690,17 +1694,23 @@ def load_lammps_eam_parameters_alloy(
         float(temp_params[4]),
     )
 
+    # print(f"{temp_params = }")
+    # print(f"{num_drho = }")
+    # print(f"{drho = }")
+    # print(f"{num_dr = }")
+    # print(f"{dr = }")
+    # print(f"{cutoff = }")
+
     # Read array values, taking into account that there may be more than one value on each line
     def parse_embedding_charge_block(start, end):
-        if len(re.split(" +", raw_text[start].strip())) > 1:
+        if len(re.split(" +", raw_text[start + 1].strip())) > 1:
             block = [
                 maybe_downcast([float(i) for i in re.split(" +", rt.strip())])
-                for rt in raw_text[start:end]
+                for rt in raw_text[start + 1 : end]
             ]
             block = jnp.concatenate(block)
         else:
-            # Why `end - 1`?
-            block = maybe_downcast([float(i) for i in raw_text[start : end - 1]])
+            block = maybe_downcast([float(i) for i in raw_text[start + 1 : end]])
 
         embedding_fn = interpolate.spline(block[:num_drho], drho)
         charge_fn = interpolate.spline(block[num_drho : num_drho + num_dr], dr)
@@ -1716,8 +1726,7 @@ def load_lammps_eam_parameters_alloy(
             ]
             block = jnp.concatenate(block)
         else:
-            # Why `end - 1`?
-            block = maybe_downcast([float(i) for i in raw_text[start : end - 1]])
+            block = maybe_downcast([float(i) for i in raw_text[start:end]])
 
         # LAMMPS EAM parameters file lists pairwise energies after multiplying by distance, in units of eV*Angstrom. We
         # divide the energy by distance below,
@@ -1730,11 +1739,19 @@ def load_lammps_eam_parameters_alloy(
 
     charge_fns, embedding_fns, pairwise_fns = [], [], []
 
+    # print(f"{species_count = }")
+
     for i in range(species_count):
+        # print(f"{i = }")
         # Need to take into account the possibility of having multiple values on each line, check with len(re.split(" +", raw_text[start].strip()))
-        data_start = 6
-        values_per_line = len(re.split(" +", raw_text[data_start].strip()))
-        block_length = int(num_drho + num_dr / values_per_line) + 1
+        data_start = 5
+        values_per_line = len(re.split(" +", raw_text[data_start + 1].strip()))
+        block_length = int((num_drho + num_dr) / values_per_line) + 1
+        # print(f"{data_start = }")
+        # print(f"{values_per_line = }")
+        # print(f"{num_drho = }")
+        # print(f"{num_dr = }")
+        # print(f"{block_length = }")
         # Parse embedding and density blocks for element i
         # Pass in line numbers for start and end of blocks e.g.
         # [6, 1007)
@@ -1743,17 +1760,30 @@ def load_lammps_eam_parameters_alloy(
         embedding_fn, charge_fn = parse_embedding_charge_block(
             data_start + i * block_length, data_start + (i + 1) * block_length
         )
+        # print(f"{data_start + (i + 1) * block_length = }")
         charge_fns.append(charge_fn)
         embedding_fns.append(embedding_fn)
+        # print(charge_fn, embedding_fn)
+
         for j in range(i + 1):
+            # print(f"{j = }")
             # Parse pairwise blocks for all element pairs i,j (where j<=i as per the setfl spec.)
             # j = (0,1,2,...,i)
             pairwise_data_start = species_count * block_length + data_start
             pairwise_block_length = int(num_dr / values_per_line)
+            # print(f"{pairwise_data_start = }")
+            # print(f"{pairwise_block_length = }")
+            # print(
+            #     f"{int(pairwise_data_start + (i * (i + 1) / 2 + j) * pairwise_block_length) = }"
+            # )
             pairwise_fn = parse_pairwise_block(
-                pairwise_data_start + (i * (i + 1) / 2 + j) * pairwise_block_length,
-                pairwise_data_start
-                + ((i * (i + 1) / 2 + j) + 1) * pairwise_block_length,
+                int(
+                    pairwise_data_start + (i * (i + 1) / 2 + j) * pairwise_block_length
+                ),
+                int(
+                    pairwise_data_start
+                    + ((i * (i + 1) / 2 + j) + 1) * pairwise_block_length
+                ),
             )  # Need contribution from i here as below
             # Count as
             # (1,0) -> 1
@@ -1766,6 +1796,7 @@ def load_lammps_eam_parameters_alloy(
             # Number in sequence = ith triangle number + j
             # i.e. i(i+1)/2 + j
             pairwise_fns.append(pairwise_fn)
+            # print(embedding_fn)
 
     return charge_fns, embedding_fns, pairwise_fns, cutoff
 
@@ -1859,17 +1890,19 @@ def eam_alloy(
 
     def energy_fn(R, species, **kwargs):
         d = partial(metric, **kwargs)
-        dr = space.map_product(d)(R, R)
+        # dr = space.map_product(d)(R, R)
 
         embedding_energy = f32(0.0)
         pairwise_energy = f32(0.0)
 
         # Logic for mapping across species adapted from smap.pair
         for i in range(species_count):
-            for j in range(i, species_count):
+            for j in range(i + 1):
                 Ra = R[species == i]
                 Rb = R[species == j]
-                dr = d(Ra, Rb)
+                dr = space.map_product(d)(Ra, Rb)
+                # return dr
+                # jax.debug.print("{dr}", dr=dr)
                 if j == i:
                     # If j == i, the diagonal of the (Ra, Ra) matrix will represent self-interactions, so we need to
                     # mask the diagonal. We then separately need to halve the energy contribution, since the i, j
@@ -1880,7 +1913,9 @@ def eam_alloy(
                     embedding_energy += embedding_fns[i](dcharge) * f32(0.5)
                     pairwise_energy += (
                         util.high_precision_sum(
-                            smap._diagonal_mask(pairwise_fns[j, i](dr)), axis=1
+                            smap._diagonal_mask(
+                                pairwise_fns[int(i * (i + 1) / 2 + j)](dr)
+                            ),
                         )
                         * f32(0.5)
                         * f32(0.5)
@@ -1890,7 +1925,7 @@ def eam_alloy(
                     dcharge = util.high_precision_sum(charge_fns[i](dr))
                     embedding_energy += embedding_fns[i](dcharge)
                     pairwise_energy += util.high_precision_sum(
-                        smap._diagonal_mask(pairwise_fns[j][i](dr)), axis=1
+                        pairwise_fns[int(i * (i + 1) / 2 + j)](dr),
                     ) * f32(0.5)
 
         return util.high_precision_sum(embedding_energy + pairwise_energy, axis=axis)
