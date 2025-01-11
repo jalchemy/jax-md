@@ -1915,55 +1915,189 @@ def eam_alloy(
     charge_fns: list[Callable[[Array], Array]],
     embedding_fns: list[Callable[[Array], Array]],
     pairwise_fns: list[list[Callable[[Array], Array]]],
+    cutoff,
     species=None,
     axis: Optional[Tuple[int, ...]] = None,
 ) -> Callable[[Array], Array]:
     metric = space.canonicalize_displacement_or_metric(displacement_or_metric)
     species_count = jnp.unique(species).shape[0]
+    jax.debug.print("Species count: {species_count}", species_count=species_count)
 
-    def energy_fn(R, species, **kwargs):
+    def energy_fn(R, *, species, **kwargs):
         d = partial(metric, **kwargs)
         # dr = space.map_product(d)(R, R)
 
-        embedding_energy = f32(0.0)
-        pairwise_energy = f32(0.0)
+        embedding_energy = jnp.zeros((R.shape[0],), dtype=f32)
+        pairwise_energy = jnp.zeros((R.shape[0],), dtype=f32)
 
         # Logic for mapping across species adapted from smap.pair
         for i in range(species_count):
             for j in range(i + 1):
-                Ra = R[species == i]
-                Rb = R[species == j]
-                dr = space.map_product(d)(Ra, Rb)
+                # We can't use arrays of dynamic size as below. Instead we can evaluate functions on the full d(R,R)
+                # arrays and then mask the results
+                # Ra = R[species == i]
+                # Rb = R[species == j]
+                # dr = space.map_product(d)(Ra, Rb)
+                Ra_mask = jnp.where(species == i, True, False)
+                Rb_mask = jnp.where(species == j, True, False)
+                dr_mask = Ra_mask[:, None] * Rb_mask
+                dr = space.map_product(d)(R, R)
+                cutoff_mask = jnp.where(dr < cutoff, True, False)
+                dr_mask = dr_mask * cutoff_mask
                 # return dr
                 # jax.debug.print("{dr}", dr=dr)
                 if j == i:
                     # If j == i, the diagonal of the (Ra, Ra) matrix will represent self-interactions, so we need to
                     # mask the diagonal. We then separately need to halve the energy contribution, since the i, j
                     # diagonal gets double-counted
+                    charge_arr = charge_fns[i](dr) * dr_mask
+                    # dcharge = util.high_precision_sum(smap._diagonal_mask(charge_arr))
                     dcharge = util.high_precision_sum(
-                        smap._diagonal_mask(charge_fns[i](dr))
+                        smap._diagonal_mask(charge_arr), axis=1
                     )
+                    # dcharge = util.high_precision_sum(
+                    #     smap._diagonal_mask(charge_fns[i](dr)[dr_mask])
+                    # )
                     embedding_energy += embedding_fns[i](dcharge) * f32(0.5)
+
                     pairwise_energy += (
                         util.high_precision_sum(
                             smap._diagonal_mask(
-                                pairwise_fns[int(i * (i + 1) / 2 + j)](dr)
+                                pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * dr_mask
                             ),
+                            axis=1,
                         )
                         * f32(0.5)
                         * f32(0.5)
                     )
 
                 else:
-                    dcharge = util.high_precision_sum(charge_fns[i](dr))
+                    dcharge = util.high_precision_sum(
+                        smap._diagonal_mask(charge_fns[i](dr) * dr_mask), axis=1
+                    )
                     embedding_energy += embedding_fns[i](dcharge)
                     pairwise_energy += util.high_precision_sum(
-                        pairwise_fns[int(i * (i + 1) / 2 + j)](dr),
+                        smap._diagonal_mask(
+                            pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * dr_mask
+                        ),
+                        axis=1,
                     ) * f32(0.5)
 
         return util.high_precision_sum(embedding_energy + pairwise_energy, axis=axis)
 
     return energy_fn
+
+
+def eam_alloy_neighbor_list(
+    displacement_or_metric: DisplacementOrMetricFn,
+    box_size: float,
+    charge_fns: list[Callable[[Array], Array]],
+    embedding_fns: list[Callable[[Array], Array]],
+    pairwise_fns: list[Callable[[Array], Array]],
+    cutoff: float,
+    species=None,
+    dr_threshold: float = 0.5,
+    axis: Optional[Tuple[int, ...]] = None,
+    fractional_coordinates: bool = True,
+    format: partition.NeighborListFormat = partition.Dense,
+    **neighbor_kwargs,
+):
+    metric = space.canonicalize_displacement_or_metric(displacement_or_metric)
+    species_count = jnp.unique(species).shape[0]
+
+    neighbor_fn = partition.neighbor_list(
+        displacement_or_metric,
+        box_size,
+        cutoff,
+        dr_threshold,
+        mask_self=False,
+        format=format,
+        **neighbor_kwargs,
+    )
+
+    def energy_fn(R, neighbor, *, species, **kwargs):
+        neighbor_mask = partition.neighbor_list_mask(neighbor)
+        neighbor_self_mask = partition.neighbor_list_mask(neighbor, mask_self=True)
+        d = partial(metric, **kwargs)
+
+        embedding_energy = jnp.zeros((R.shape[0],), dtype=f32)
+        pairwise_energy = jnp.zeros((R.shape[0],), dtype=f32)
+
+        if neighbor.format is partition.Dense:
+            # Logic for mapping across species adapted from smap.pair
+            for i in range(species_count):
+                for j in range(i + 1):
+                    # jax.debug.print(
+                    #     "{embedding_energy}", embedding_energy=embedding_energy
+                    # )
+                    # print(f"{pairwise_energy = }")
+                    # We can't use arrays of dynamic size as below. Instead we can evaluate functions on the full d(R,R)
+                    # arrays and then mask the results
+                    # Ra = R[species == i]
+                    # Rb = R[species == j]
+                    # dr = space.map_product(d)(Ra, Rb)
+                    Ra_mask = jnp.where(species == i, True, False)
+                    Rb_mask = jnp.where(species[neighbor.idx] == j, True, False)
+                    dr_mask = Ra_mask[:, None] * Rb_mask
+                    dr = space.map_neighbor(d)(R, R[neighbor.idx])
+
+                    # print(f"{Ra_mask.shape = }")
+                    # print(f"{Rb_mask.shape = }")
+                    # print(f"{dr_mask.shape = }")
+                    # print(f"{dr.shape = }")
+                    # print(f"{Ra_mask = }")
+                    # print(f"{Rb_mask = }")
+                    # print(f"{dr_mask = }")
+                    # print(f"{dr = }")
+
+                    if j == i:
+                        charge_arr = charge_fns[i](dr)
+                        # print(f"{charge_arr.shape = }")
+                        # print(f"{charge_arr = }")
+                        charge_arr = charge_arr * dr_mask * neighbor_mask
+                        # print(f"{charge_arr * dr_mask * neighbor_mask = }")
+                        dcharge = util.high_precision_sum(charge_arr, axis=1)
+                        # print(f"{dcharge.shape = }")
+                        # de_embed = embedding_fns[i](dcharge) * f32(0.5)
+                        # print(f"{de_embed.shape = }")
+                        embedding_energy += embedding_fns[i](dcharge) * f32(0.5)
+
+                        pairwise_energy += (
+                            util.high_precision_sum(
+                                pairwise_fns[int(i * (i + 1) / 2 + j)](dr)
+                                * dr_mask
+                                * neighbor_self_mask,
+                                axis=1,
+                            )
+                            * f32(0.5)
+                            # * f32(0.5)
+                        )
+                    else:
+                        dcharge = util.high_precision_sum(
+                            charge_fns[i](dr) * dr_mask * neighbor_mask, axis=1
+                        )
+                        embedding_energy += embedding_fns[i](dcharge)
+
+                        pairwise_energy += util.high_precision_sum(
+                            pairwise_fns[int(i * (i + 1) / 2 + j)](dr)
+                            * dr_mask
+                            * neighbor_self_mask,
+                            axis=1,
+                        ) * f32(0.5)
+
+        else:
+            raise NotImplementedError(
+                "EAM alloy potential not implemented for "
+                "Sparse and OrderedSparse neighbor lists."
+            )
+        # print(f"{embedding_energy + pairwise_energy = }")
+        # print(f"{(embedding_energy + pairwise_energy).shape = }")
+        # print(
+        #     f"{util.high_precision_sum(embedding_energy + pairwise_energy, axis=axis)}"
+        # )
+        return util.high_precision_sum(embedding_energy + pairwise_energy, axis=axis)
+
+    return neighbor_fn, energy_fn
 
 
 def eam_from_lammps_parameters(
