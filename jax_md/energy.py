@@ -2033,20 +2033,45 @@ def eam_alloy_neighbor_list(
         **neighbor_kwargs,
     )
 
-    def energy_fn(R, neighbor, *, species, **kwargs):
+    def energy_fn(R, neighbor, *, species, idxs=None, **kwargs):
         # neighbor_mask = partition.neighbor_list_mask(neighbor)
-        neighbor_self_mask = partition.neighbor_list_mask(neighbor, mask_self=True)
+        if idxs is not None:
+            neighbor_self_mask = partition.neighbor_list_mask(neighbor, mask_self=True)[
+                idxs
+            ]
+        else:
+            neighbor_self_mask = partition.neighbor_list_mask(neighbor, mask_self=True)
         d = partial(metric, **kwargs)
-        dr = space.map_neighbor(d)(R, R[neighbor.idx])
+        # jax.debug.print("R[neighbor.idx].shape: {s}", s=R[neighbor.idx].shape)
+        # jax.debug.print("R[neighbor.idx][0,0]: {s}", s=R[neighbor.idx][0, 0])
+        # jax.debug.print("R[948]: {s}", s=R[948])
+        if idxs is not None:
+            dr = space.map_neighbor(d)(R[idxs], R[neighbor.idx[idxs]])
+        else:
+            dr = space.map_neighbor(d)(R, R[neighbor.idx])
 
-        embedding_energy = jnp.zeros((R.shape[0],), dtype=f32)
-        pairwise_energy = jnp.zeros((R.shape[0],), dtype=f32)
+        if idxs is not None:
+            embedding_energy = jnp.zeros((idxs.shape[0],), dtype=f32)
+            pairwise_energy = jnp.zeros((idxs.shape[0],), dtype=f32)
+        else:
+            embedding_energy = jnp.zeros((R.shape[0],), dtype=f32)
+            pairwise_energy = jnp.zeros((R.shape[0],), dtype=f32)
+
+        # jax.debug.print("species: {species}", species=species)
 
         if neighbor.format is partition.Dense:
-            dcharge = jnp.zeros((R.shape[0],))
+            if idxs is not None:
+                dcharge = jnp.zeros((idxs.shape[0],))
+            else:
+                dcharge = jnp.zeros((R.shape[0],))
 
             for j in range(species_count):
-                Rj_mask = jnp.where(species[neighbor.idx] == j, True, False)
+                # jax.debug.print("neighbor.idx.shape: {s}", s=neighbor.idx.shape)
+                if idxs is not None:
+                    Rj_mask = jnp.where(species[neighbor.idx[idxs]] == j, True, False)
+                else:
+                    Rj_mask = jnp.where(species[neighbor.idx] == j, True, False)
+                # jax.debug.print("Rj_mask: {Rj_mask}", Rj_mask=Rj_mask)
 
                 # jax.debug.print("j (embed) = {j}\n", j=j)
 
@@ -2062,8 +2087,14 @@ def eam_alloy_neighbor_list(
             # Logic for mapping across species adapted from smap.pair
             for i in range(species_count):
                 # jax.debug.print("\ni = {i}", i=i)
-                Ri_mask = jnp.where(species == i, True, False)
-                Ri_nb_mask = jnp.where(species[neighbor.idx] == i, True, False)
+                if idxs is not None:
+                    Ri_mask = jnp.where(species[idxs] == i, True, False)
+                    Ri_nb_mask = jnp.where(
+                        species[neighbor.idx[idxs]] == i, True, False
+                    )
+                else:
+                    Ri_mask = jnp.where(species == i, True, False)
+                    Ri_nb_mask = jnp.where(species[neighbor.idx] == i, True, False)
 
                 # Calculate embedding contribution
                 # jax.debug.print("dcharge before embed: {dcharge}", dcharge=dcharge)
@@ -2087,8 +2118,14 @@ def eam_alloy_neighbor_list(
                     # Ra = R[species == i]
                     # Rb = R[species == j]
                     # dr = space.map_product(d)(Ra, Rb)
-                    Rj_mask = jnp.where(species == j, True, False)
-                    Rj_nb_mask = jnp.where(species[neighbor.idx] == j, True, False)
+                    if idxs is not None:
+                        Rj_mask = jnp.where(species[idxs] == j, True, False)
+                        Rj_nb_mask = jnp.where(
+                            species[neighbor.idx[idxs]] == j, True, False
+                        )
+                    else:
+                        Rj_mask = jnp.where(species == j, True, False)
+                        Rj_nb_mask = jnp.where(species[neighbor.idx] == j, True, False)
 
                     # Mask to accept all A-B *and* all B-A pairs, since we only loop through j up to i+1
                     pairwise_mask = (

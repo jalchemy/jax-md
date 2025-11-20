@@ -435,7 +435,7 @@ def pair_correlation(
       raise TypeError("Malformed species; expecting array of integers.")
     species_types = jnp.unique(species)
 
-    def g_fn(R):
+    def g_fn(R, species):
       dim = R.shape[-1]
       g_R = []
       mask = 1 - jnp.eye(R.shape[0], dtype=R.dtype)
@@ -555,17 +555,26 @@ def pair_correlation_neighbor_list(
     ##### Hardcoding size=2 for now to make it work with vmap. NEED TO CHANGE IN THE FUTURE
     species_types = jnp.unique(species, size=2)
 
-    def g_fn(R, neighbor):
+    def g_fn(R, neighbor, species):
       N, dim = R.shape
       g_R = []
+      # g_R = jnp.zeros((len(species_types), N, inv_rad.shape[0]))
       mask = partition.neighbor_list_mask(neighbor)
       if neighbor.format is partition.Dense:
         neighbor_species = species[neighbor.idx]
         R_neigh = R[neighbor.idx]
         d = space.map_neighbor(metric)
         _pairwise = vmap(vmap(pairwise, (0, None)), (0, None))
-        for s in species_types:
+        for i, s in enumerate(species_types):
           mask_s = mask * (neighbor_species == s)
+          # mask_s = mask * jnp.where(neighbor_species == s, 1, 0)
+          # mask_s = mask * jnp.where(neighbor_species == s, neighbor_species, -neighbor_species)
+          # g_R = g_R.at[i].set(
+          #   jnp.sum(
+          #     mask_s[:, :, jnp.newaxis] * _pairwise(d(R, R_neigh), dim),
+          #     axis=(1,),
+          #   )
+          # )
           g_R += [
             jnp.sum(
               mask_s[:, :, jnp.newaxis] * _pairwise(d(R, R_neigh), dim),

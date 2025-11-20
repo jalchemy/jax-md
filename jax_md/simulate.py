@@ -41,6 +41,8 @@ import functools
 
 from jax import grad
 from jax import jit
+from jax import vmap
+import jax
 from jax import random
 import jax.numpy as jnp
 from jax import lax
@@ -1221,6 +1223,7 @@ class MCState:
     position: Array
     species: Array
     key: Array
+    neighbor: partition.NeighborList
 
 
 def swap_mc(
@@ -1246,34 +1249,100 @@ def swap_mc(
       See above.
     """
 
-    def init_fn(key, position, species):
-        return MCState(position, species, key)
+    def init_fn(key, position, species, neighbor):
+        return MCState(position, species, key, neighbor)
 
     if isinstance(kT, Array):
+        # cutoff = 6.466292682
+        # box_size = 37.4
+        # d_fn, s_fn = space.periodic(box_size)
+        # nbr_fn = partition.neighbor_list(
+        #     d_fn, box_size, cutoff, capacity_multiplier=1.0
+        # )
 
         def apply_fn(state, kT, **kwargs):
-            R, species, key = dataclasses.unpack(state)
+            R, species, key, nbrs = dataclasses.unpack(state)
 
             N = R.shape[0]
 
             # Swap a random pair of particle radii.
             key, particle_key, accept_key = random.split(key, num=3)
             ij = random.randint(particle_key, (2,), jnp.array(0), jnp.array(N))
+            ji = ij[::-1]
             # new_species = species.at[ij].set([species[ij[1]], species[ij[0]]])
-            new_species = species.at[ij].set(species[ij[::-1]])
+            new_species = species.at[ij].set(species[ji])
+
+            # shape (2+ 2*m, m)
+            idxs = jnp.hstack([ij, jnp.ravel(nbrs.idx[ij])])
+            # jax.debug.print("ij: {ij}", ij=ij)
+            # jax.debug.print("idxs: {idxs}", idxs=idxs)
+
+            # Need all the neighbors of i and j, as well as all the neighbors of their neighbors
+            # species_nbrs = partition.NeighborList(
+            #     idx=nbrs.idx[idxs],
+            #     reference_position=nbrs.reference_position[idxs],
+            #     error=nbrs.error,
+            #     cell_list_capacity=nbrs.cell_list_capacity,
+            #     max_occupancy=nbrs.max_occupancy,
+            #     format=nbrs.format,
+            #     cell_size=nbrs.cell_size,
+            #     cell_list_fn=nbrs.cell_list_fn,
+            #     update_fn=nbrs.update_fn,
+            # )
 
             # Compute the energy before the swap.
-            orig_energy = energy_fn(R, species=species, **kwargs)
+            # orig_energy = energy_fn(R, species=species, **kwargs)
 
             # Compute the energy after the swap.
-            new_energy = energy_fn(R, species=new_species, **kwargs)
+            # new_energy = energy_fn(R, species=new_species, **kwargs)
+            # Compute the energy before the swap.
+            # jax.debug.print("nbrs.idx: {nbrs}", nbrs=nbrs.idx)
+            # print(f"{nbrs.idx = }")
+            # orig_energy = energy_fn(R, species=species, neighbor=nbrs, idxs=idxs)
+            orig_energy = energy_fn(R, species=species, neighbor=nbrs)
+
+            # Compute the energy after the swap.
+            # new_energy = energy_fn(R, species=new_species, neighbor=nbrs, idxs=idxs)
+            new_energy = energy_fn(R, species=new_species, neighbor=nbrs)
+
+            # jax.debug.print(
+            #     "species_nbrs.idx: {species_nbrs}", species_nbrs=species_nbrs.idx
+            # )
+
+            # jax.debug.print(
+            #     "species_nbrs.ref_pos: {x}",
+            #     x=species_nbrs.reference_position,
+            # )
+
+            # jax.debug.print("species[ij]: {s}", s=species[ij])
+            # jax.debug.print("new_species[ij]: {s}", s=new_species[ij])
+
+            # energies = vmap(
+            #     lambda s: energy_fn(R[ij], species=s, neighbor=new_species_nbrs)
+            # )(jnp.stack([species[ij], new_species[ij]]))
+
+            # energies = vmap(lambda s: energy_fn(R, species=s, **kwargs))(
+            #     jnp.stack([species, new_species])
+            # )
 
             # Accept or reject with a metropolis probability.
             p = random.uniform(accept_key, ())
+            # jax.debug.print(
+            #     "dE: {diff}",
+            #     # diff=energies[1] - energies[0],
+            #     diff=new_energy - orig_energy,
+            # )
+
+            # jax.debug.print(
+            #     "new_energy: {new_energy}",
+            #     # diff=energies[1] - energies[0],
+            #     new_energy=new_energy,
+            # )
             accept_prob = jnp.minimum(1, jnp.exp(-(new_energy - orig_energy) / kT))
+            # accept_prob = jnp.minimum(1, jnp.exp(-(energies[1] - energies[0]) / kT))
             species = jnp.where(p < accept_prob, new_species, species)
 
-            return MCState(R, species, key)
+            return MCState(R, species, key, nbrs)
 
     elif isinstance(kT, float):
 
