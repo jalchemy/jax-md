@@ -47,7 +47,7 @@ Box = space.Box
 EnergyFn = Callable[..., Array]
 ForceFn = Callable[..., Array]
 
-T = TypeVar("T")
+T = TypeVar('T')
 InitFn = Callable[..., T]
 ApplyFn = Callable[[T], T]
 Simulator = Tuple[InitFn, ApplyFn]
@@ -67,7 +67,9 @@ def clipped_force(energy_fn: EnergyFn, max_force: float) -> ForceFn:
   def wrapped_force_fn(R, *args, **kwargs):
     force = force_fn(R, *args, **kwargs)
     force_norm = jnp.linalg.norm(force, axis=-1, keepdims=True)
-    return jnp.where(force_norm > max_force, force / force_norm * max_force, force)
+    return jnp.where(
+      force_norm > max_force, force / force_norm * max_force, force
+    )
 
   return wrapped_force_fn
 
@@ -90,9 +92,9 @@ def canonicalize_force(energy_or_force_fn: Union[EnergyFn, ForceFn]) -> ForceFn:
         )
         if not is_valid_force:
           raise ValueError(
-            "Provided function should be compatible with "
-            "either an energy or a force. Found a function "
-            f"whose output has shape {out_shaped}."
+            'Provided function should be compatible with '
+            'either an energy or a force. Found a function '
+            f'whose output has shape {out_shaped}.'
           )
 
         _force_fn = energy_or_force_fn
@@ -115,7 +117,7 @@ def volume(dimension: int, box: Box) -> Array:
   elif box.ndim == 2:
     return jnp.linalg.det(box)
   raise ValueError(
-    (f"Box must be either: a scalar, a vector, or a matrix. Found {box}.")
+    (f'Box must be either: a scalar, a vector, or a matrix. Found {box}.')
   )
 
 
@@ -140,13 +142,13 @@ def kinetic_energy(
   """
   if unused_args:
     raise ValueError(
-      "To use the kinetic energy function, you must explicitly "
-      "pass either momentum or velocity as a keyword argument."
+      'To use the kinetic energy function, you must explicitly '
+      'pass either momentum or velocity as a keyword argument.'
     )
   if momentum is not None and velocity is not None:
     raise ValueError(
-      "To use the kinetic energy function, you must pass either"
-      " a momentum or a velocity."
+      'To use the kinetic energy function, you must pass either'
+      ' a momentum or a velocity.'
     )
 
   k = (lambda v, m: v**2 * m) if momentum is None else (lambda p, m: p**2 / m)
@@ -178,13 +180,13 @@ def temperature(
   """
   if unused_args:
     raise ValueError(
-      "To use the kinetic energy function, you must explicitly "
-      "pass either momentum or velocity as a keyword argument."
+      'To use the kinetic energy function, you must explicitly '
+      'pass either momentum or velocity as a keyword argument.'
     )
   if momentum is not None and velocity is not None:
     raise ValueError(
-      "To use the kinetic energy function, you must pass either"
-      " a momentum or a velocity."
+      'To use the kinetic energy function, you must pass either'
+      ' a momentum or a velocity.'
     )
 
   t = (lambda v, m: v**2 * m) if momentum is None else (lambda p, m: p**2 / m)
@@ -338,7 +340,9 @@ def average_pair_correlation_results(gofr, species=None):
   if species is None:
     return jnp.mean(gofr, axis=0)
   ##### Hardcoding size=2 for now to make it work with vmap. NEED TO CHANGE IN THE FUTURE
-  species_types = jnp.unique(species, size=2)  # note: this returns in sorted order
+  species_types = jnp.unique(
+    species, size=2
+  )  # note: this returns in sorted order
 
   # Updated below return statement to avoid dynamic bool array masks, using a 3-arg jnp.where instead so that the
   # function is fully jit and vmap compatible
@@ -417,7 +421,9 @@ def pair_correlation(
   inv_rad = 1 / (radii + eps)
 
   def pairwise(dr, dim):
-    return jnp.exp(-f32(0.5) * (dr - radii) ** 2 / sigma**2) * inv_rad ** (dim - 1)
+    return jnp.exp(-f32(0.5) * (dr - radii) ** 2 / sigma**2) * inv_rad ** (
+      dim - 1
+    )
 
   pairwise = vmap(vmap(pairwise, (0, None)), (0, None))
 
@@ -432,7 +438,7 @@ def pair_correlation(
       return g_R
   else:
     if not (isinstance(species, jnp.ndarray) and is_integer(species)):
-      raise TypeError("Malformed species; expecting array of integers.")
+      raise TypeError('Malformed species; expecting array of integers.')
     species_types = jnp.unique(species)
 
     def g_fn(R, species):
@@ -514,7 +520,9 @@ def pair_correlation_neighbor_list(
   inv_rad = 1 / (radii + eps)
 
   def pairwise(dr, dim):
-    return jnp.exp(-f32(0.5) * (dr - radii) ** 2 / sigma**2) * inv_rad ** (dim - 1)
+    return jnp.exp(-f32(0.5) * (dr - radii) ** 2 / sigma**2) * inv_rad ** (
+      dim - 1
+    )
 
   neighbor_fn = partition.neighbor_list(
     displacement_or_metric,
@@ -533,25 +541,29 @@ def pair_correlation_neighbor_list(
         R_neigh = R[neighbor.idx]
         d = space.map_neighbor(metric)
         _pairwise = vmap(vmap(pairwise, (0, None)), (0, None))
-        g_R = jnp.sum(mask[:, :, None] * _pairwise(d(R, R_neigh), dim), axis=(1,))
+        g_R = jnp.sum(
+          mask[:, :, None] * _pairwise(d(R, R_neigh), dim), axis=(1,)
+        )
         if compute_average:
           g_R = average_pair_correlation_results(g_R, species)
         return g_R
       elif neighbor.format is partition.Sparse:
         dr = space.map_bond(metric)(R[neighbor.idx[0]], R[neighbor.idx[1]])
         _pairwise = vmap(pairwise, (0, None))
-        g_R = ops.segment_sum(mask[:, None] * _pairwise(dr, dim), neighbor.idx[0], N)
+        g_R = ops.segment_sum(
+          mask[:, None] * _pairwise(dr, dim), neighbor.idx[0], N
+        )
         if compute_average:
           g_R = average_pair_correlation_results(g_R, species)
         return g_R
       else:
         raise NotImplementedError(
-          "Pair correlation function does not support OrderedSparse neighbor lists."
+          'Pair correlation function does not support OrderedSparse neighbor lists.'
         )
 
   else:
     if not (isinstance(species, jnp.ndarray) and is_integer(species)):
-      raise TypeError("Malformed species; expecting array of integers.")
+      raise TypeError('Malformed species; expecting array of integers.')
     ##### Hardcoding size=2 for now to make it work with vmap. NEED TO CHANGE IN THE FUTURE
     species_types = jnp.unique(species, size=2)
 
@@ -588,11 +600,13 @@ def pair_correlation_neighbor_list(
         for s in species_types:
           mask_s = mask * (neighbor_species == s)
           g_R += [
-            ops.segment_sum(mask_s[:, None] * _pairwise(dr, dim), neighbor.idx[0], N)
+            ops.segment_sum(
+              mask_s[:, None] * _pairwise(dr, dim), neighbor.idx[0], N
+            )
           ]
       else:
         raise NotImplementedError(
-          "Pair correlation function does not support OrderedSparse neighbor lists."
+          'Pair correlation function does not support OrderedSparse neighbor lists.'
         )
 
       if compute_average:
@@ -688,7 +702,7 @@ def box_from_parameters(
 
 
 def bulk_modulus(elastic_tensor: Array) -> float:
-  return jnp.einsum("iijj->", elastic_tensor) / elastic_tensor.shape[0] ** 2
+  return jnp.einsum('iijj->', elastic_tensor) / elastic_tensor.shape[0] ** 2
 
 
 @dataclasses.dataclass
