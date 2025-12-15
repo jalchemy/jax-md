@@ -79,7 +79,7 @@ def simple_spring(
   alpha: Array = 2,
   **unused_kwargs,
 ) -> Array:
-  """Isotropic spring potential with a given rest length.
+    """Isotropic spring potential with a given rest length.
 
     We define `simple_spring` to be a generalized Hookean spring with
     agreement when `alpha = 2`.
