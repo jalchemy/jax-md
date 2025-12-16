@@ -120,28 +120,28 @@ def soft_sphere(
 ) -> Array:
   """.. _soft-sphere:
 
-    Finite ranged repulsive interaction between soft spheres.
+  Finite ranged repulsive interaction between soft spheres.
 
-    Args:
-      dr: An ndarray of shape `[n, m]` of pairwise distances between particles.
-      sigma: Particle diameter. Should either be a floating point scalar or an
-        ndarray whose shape is `[n, m]`.
-      epsilon: Interaction energy scale. Should either be a floating point scalar
-        or an ndarray whose shape is `[n, m]`.
-      alpha: Exponent specifying interaction stiffness. Should either be a float
-        point scalar or an ndarray whose shape is `[n, m]`.
-      unused_kwargs: Allows extra data (e.g. time) to be passed to the energy.
-    Returns:
-      Matrix of energies whose shape is `[n, m]`.
-    """
+  Args:
+    dr: An ndarray of shape `[n, m]` of pairwise distances between particles.
+    sigma: Particle diameter. Should either be a floating point scalar or an
+      ndarray whose shape is `[n, m]`.
+    epsilon: Interaction energy scale. Should either be a floating point scalar
+      or an ndarray whose shape is `[n, m]`.
+    alpha: Exponent specifying interaction stiffness. Should either be a float
+      point scalar or an ndarray whose shape is `[n, m]`.
+    unused_kwargs: Allows extra data (e.g. time) to be passed to the energy.
+  Returns:
+    Matrix of energies whose shape is `[n, m]`.
+  """
 
-    dr = dr / sigma
-    fn = lambda dr: epsilon / alpha * (f32(1.0) - dr) ** alpha
+  dr = dr / sigma
+  fn = lambda dr: epsilon / alpha * (f32(1.0) - dr) ** alpha
 
-    if isinstance(alpha, int) or issubclass(type(alpha.dtype), jnp.integer):
-        return jnp.where(dr < 1.0, fn(dr), f32(0.0))
+  if isinstance(alpha, int) or issubclass(type(alpha.dtype), jnp.integer):
+    return jnp.where(dr < 1.0, fn(dr), f32(0.0))
 
-    return util.safe_mask(dr < 1.0, fn, dr, f32(0.0))
+  return util.safe_mask(dr < 1.0, fn, dr, f32(0.0))
 
 
 def soft_sphere_pair(
@@ -208,7 +208,7 @@ def soft_sphere_neighbor_list(
     reduce_axis=(1,) if per_particle else None,
   )
 
-    return neighbor_fn, energy_fn
+  return neighbor_fn, energy_fn
 
 
 def lennard_jones(
@@ -302,7 +302,7 @@ def lennard_jones_neighbor_list(
     reduce_axis=(1,) if per_particle else None,
   )
 
-    return neighbor_fn, energy_fn
+  return neighbor_fn, energy_fn
 
 
 def morse(
@@ -402,45 +402,45 @@ def morse_neighbor_list(
     reduce_axis=(1,) if per_particle else None,
   )
 
-    return neighbor_fn, energy_fn
+  return neighbor_fn, energy_fn
 
 
 def gupta_potential(displacement, p, q, r_0n, U_n, A, cutoff):
-    """.. _gupta-pot:
+  """.. _gupta-pot:
 
-    Gupta potential with default parameters for Au_55 cluster. Gupta
-    potential was introduced by R. P. Gupta [#gupta]_. This potential uses
-    parameters that were fit for bulk gold by Jellinek [#jellinek]_. This
-    particular implementation of the Gupta potential was introduced by Garzon and
-    Posada-Amarillas [#garzon]_.
+  Gupta potential with default parameters for Au_55 cluster. Gupta
+  potential was introduced by R. P. Gupta [#gupta]_. This potential uses
+  parameters that were fit for bulk gold by Jellinek [#jellinek]_. This
+  particular implementation of the Gupta potential was introduced by Garzon and
+  Posada-Amarillas [#garzon]_.
 
-    Args:
-      displacement: Function to compute displacement between two positions.
-      p: Gupta potential parameter of the repulsive term that was fitted for
-        bulk gold.
-      q: Gupta potential parameter of the attractive term that was fitted for
-        bulk gold.
-      r_0n:
-        Parameter that determines the length scale of the potential. This
-        value was particularly fit for gold clusters of size 55 atoms.
-      U_n:
-        Parameter that determines the energy scale, fit particularly for
-        gold clusters of size 55 atoms.
-      A: Parameter that was obtained using the cohesive energy of the fcc gold
-        metal.
-      cutoff:
-        Pairwise interactions that are farther than the cutoff distance will be
-        ignored.
+  Args:
+    displacement: Function to compute displacement between two positions.
+    p: Gupta potential parameter of the repulsive term that was fitted for
+      bulk gold.
+    q: Gupta potential parameter of the attractive term that was fitted for
+      bulk gold.
+    r_0n:
+      Parameter that determines the length scale of the potential. This
+      value was particularly fit for gold clusters of size 55 atoms.
+    U_n:
+      Parameter that determines the energy scale, fit particularly for
+      gold clusters of size 55 atoms.
+    A: Parameter that was obtained using the cohesive energy of the fcc gold
+      metal.
+    cutoff:
+      Pairwise interactions that are farther than the cutoff distance will be
+      ignored.
 
-    Returns:
-      A function that takes in positions of gold atoms (shape `[n, 3]` where `n`
-      is the number of atoms) and returns the total energy of the system in units
-      of eV.
+  Returns:
+    A function that takes in positions of gold atoms (shape `[n, 3]` where `n`
+    is the number of atoms) and returns the total energy of the system in units
+    of eV.
 
   .. rubric:: References
   .. [#gupta] R.P. Gupta, Phys. Rev. B 23, 6265 (1981)
   .. [#jellinek] J. Jellinek, in Metal-Ligand Interactions, edited by N. Russo
-     and D. R. Salahub (Kluwer Academic, Dordrecht, 1996), p. 325.
+    and D. R. Salahub (Kluwer Academic, Dordrecht, 1996), p. 325.
   .. [#garzon] I.L. Garzon, A. Posada-Amarillas, Phys. Rev. B 54, 16 (1996)
   """
 
@@ -450,11 +450,11 @@ def gupta_potential(displacement, p, q, r_0n, U_n, A, cutoff):
     term1 = jnp.exp(-1.0 * p * (r / r_0n - 1))
     return jnp.where(within_cutoff, term1, 0.0)
 
-    def _gupta_term2(r, q, r_0n, cutoff):
-        """Attractive term in Gupta potential."""
-        within_cutoff = (r > 0) & (r < cutoff)
-        term2 = jnp.exp(-2.0 * q * (r / r_0n - 1))
-        return jnp.where(within_cutoff, term2, 0.0)
+  def _gupta_term2(r, q, r_0n, cutoff):
+    """Attractive term in Gupta potential."""
+    within_cutoff = (r > 0) & (r < cutoff)
+    term2 = jnp.exp(-2.0 * q * (r / r_0n - 1))
+    return jnp.where(within_cutoff, term2, 0.0)
 
   def compute_fn(R):
     dR = space.map_product(displacement)(R, R)
@@ -467,7 +467,7 @@ def gupta_potential(displacement, p, q, r_0n, U_n, A, cutoff):
     second_term = util.safe_mask(attractive_term > 0, jnp.sqrt, attractive_term)
     return U_n / 2.0 * jnp.sum(first_term - second_term)
 
-    return compute_fn
+  return compute_fn
 
 
 GUPTA_GOLD55_DICT = {
@@ -495,34 +495,34 @@ def multiplicative_isotropic_cutoff(
 ) -> Callable[..., Array]:
   """Takes an isotropic function and constructs a truncated function.
 
-    Given a function `f:R -> R`, we construct a new function `f':R -> R` such
-    that `f'(r) = f(r)` for `r < r_onset`, `f'(r) = 0` for `r > r_cutoff`, and
-    `f(r)` is :math:`C^1` everywhere. To do this, we follow the approach outlined
-    in HOOMD Blue  [#hoomd]_ (thanks to Carl Goodrich for the pointer). We
-    construct a function `S(r)` such that `S(r) = 1` for `r < r_onset`,
-    `S(r) = 0` for `r > r_cutoff`, and `S(r)` is :math:`C^1`. Then
-    `f'(r) = S(r)f(r)`.
+  Given a function `f:R -> R`, we construct a new function `f':R -> R` such
+  that `f'(r) = f(r)` for `r < r_onset`, `f'(r) = 0` for `r > r_cutoff`, and
+  `f(r)` is :math:`C^1` everywhere. To do this, we follow the approach outlined
+  in HOOMD Blue  [#hoomd]_ (thanks to Carl Goodrich for the pointer). We
+  construct a function `S(r)` such that `S(r) = 1` for `r < r_onset`,
+  `S(r) = 0` for `r > r_cutoff`, and `S(r)` is :math:`C^1`. Then
+  `f'(r) = S(r)f(r)`.
 
-    Args:
-      fn: A function that takes an ndarray of distances of shape `[n, m]` as well
-        as varargs.
-      r_onset: A float specifying the distance marking the onset of deformation.
-      r_cutoff: A float specifying the cutoff distance.
+  Args:
+    fn: A function that takes an ndarray of distances of shape `[n, m]` as well
+      as varargs.
+    r_onset: A float specifying the distance marking the onset of deformation.
+    r_cutoff: A float specifying the cutoff distance.
 
-    Returns:
-      A new function with the same signature as fn, with the properties outlined
-      above.
+  Returns:
+    A new function with the same signature as fn, with the properties outlined
+    above.
 
-    .. rubric:: References
-    .. [#hoomd] HOOMD Blue documentation. Accessed on 05/31/2019.
-        https://hoomd-blue.readthedocs.io/en/stable/module-md-pair.html#hoomd.md.pair.pair
-    """
+  .. rubric:: References
+  .. [#hoomd] HOOMD Blue documentation. Accessed on 05/31/2019.
+      https://hoomd-blue.readthedocs.io/en/stable/module-md-pair.html#hoomd.md.pair.pair
+  """
 
-    r_c = r_cutoff ** f32(2)
-    r_o = r_onset ** f32(2)
+  r_c = r_cutoff ** f32(2)
+  r_o = r_onset ** f32(2)
 
-    def smooth_fn(dr):
-        r = dr ** f32(2)
+  def smooth_fn(dr):
+    r = dr ** f32(2)
 
     inner = jnp.where(
       dr < r_cutoff,
@@ -530,13 +530,13 @@ def multiplicative_isotropic_cutoff(
       0,
     )
 
-        return jnp.where(dr < r_onset, 1, inner)
+    return jnp.where(dr < r_onset, 1, inner)
 
-    @wraps(fn)
-    def cutoff_fn(dr, *args, **kwargs):
-        return smooth_fn(dr) * fn(dr, *args, **kwargs)
+  @wraps(fn)
+  def cutoff_fn(dr, *args, **kwargs):
+    return smooth_fn(dr) * fn(dr, *args, **kwargs)
 
-    return cutoff_fn
+  return cutoff_fn
 
 
 def dsf_coulomb(
@@ -545,14 +545,14 @@ def dsf_coulomb(
   """Damped-shifted-force approximation of the coulombic interaction."""
   qqr2e = 332.06371  # Coulombic conversion factor: 1/(4*pi*epo).
 
-    cutoffsq = cutoff * cutoff
-    erfcc = erfc(alpha * cutoff)
-    erfcd = jnp.exp(-alpha * alpha * cutoffsq)
-    f_shift = -(erfcc / cutoffsq + 2 / jnp.sqrt(jnp.pi) * alpha * erfcd / cutoff)
-    e_shift = erfcc / cutoff - f_shift * cutoff
+  cutoffsq = cutoff * cutoff
+  erfcc = erfc(alpha * cutoff)
+  erfcd = jnp.exp(-alpha * alpha * cutoffsq)
+  f_shift = -(erfcc / cutoffsq + 2 / jnp.sqrt(jnp.pi) * alpha * erfcd / cutoff)
+  e_shift = erfcc / cutoff - f_shift * cutoff
 
-    e = qqr2e * Q_sq / r * (erfc(alpha * r) - r * e_shift - r**2 * f_shift)
-    return jnp.where(r < cutoff, e, 0.0)
+  e = qqr2e * Q_sq / r * (erfc(alpha * r) - r * e_shift - r**2 * f_shift)
+  return jnp.where(r < cutoff, e, 0.0)
 
 
 def bks(
@@ -690,8 +690,7 @@ def bks_neighbor_list(
     cutoff=cutoff,
   )
 
-    return neighbor_fn, energy_fn
-
+  return neighbor_fn, energy_fn
 
 
 # BKS Potential Parameters.
@@ -738,7 +737,7 @@ def bks_silica_pair(
   N_0 = jnp.sum(species == 0)
   N_1 = jnp.sum(species == 1)
 
-    e_self = partial(_bks_silica_self, alpha=0.25, cutoff=cutoff)
+  e_self = partial(_bks_silica_self, alpha=0.25, cutoff=cutoff)
 
   def energy_fn(R, **kwargs):
     return (
@@ -747,7 +746,7 @@ def bks_silica_pair(
       + N_1 * e_self(CHARGE_OXYGEN**2)
     )
 
-    return energy_fn
+  return energy_fn
 
 
 def bks_silica_neighbor_list(
@@ -775,7 +774,7 @@ def bks_silica_neighbor_list(
   N_0 = jnp.sum(species == 0)
   N_1 = jnp.sum(species == 1)
 
-    e_self = partial(_bks_silica_self, alpha=0.25, cutoff=cutoff)
+  e_self = partial(_bks_silica_self, alpha=0.25, cutoff=cutoff)
 
   def energy_fn(R, neighbor, **kwargs):
     return (
@@ -784,7 +783,7 @@ def bks_silica_neighbor_list(
       + N_1 * e_self(CHARGE_OXYGEN**2)
     )
 
-    return neighbor_fn, energy_fn
+  return neighbor_fn, energy_fn
 
 
 # Stillinger-Weber Potential
@@ -857,47 +856,47 @@ def stillinger_weber(
 ) -> Callable[[Array], Array]:
   """.. _sw-pot:
 
-    Computes the Stillinger-Weber potential.
+  Computes the Stillinger-Weber potential.
 
-    The Stillinger-Weber (SW) potential [#stillinger]_ which is commonly used to
-    model silicon and similar systems. This function uses the default SW
-    parameters from the original paper. The SW potential was originally proposed
-    to model diamond in the diamond crystal phase and the liquid phase, and is
-    known to give unphysical amorphous configurations [#holender]_ [#barkema]_ .
-    For this reason, we provide a `three_body_strength` parameter. Changing this
-    number to `1.5` or `2.0` has been know to produce more physical amorphous
-    phase, preventing most atoms from having more than four nearest neighbors.
-    Note that this function currently assumes nearest-image-convention.
+  The Stillinger-Weber (SW) potential [#stillinger]_ which is commonly used to
+  model silicon and similar systems. This function uses the default SW
+  parameters from the original paper. The SW potential was originally proposed
+  to model diamond in the diamond crystal phase and the liquid phase, and is
+  known to give unphysical amorphous configurations [#holender]_ [#barkema]_ .
+  For this reason, we provide a `three_body_strength` parameter. Changing this
+  number to `1.5` or `2.0` has been know to produce more physical amorphous
+  phase, preventing most atoms from having more than four nearest neighbors.
+  Note that this function currently assumes nearest-image-convention.
 
-    Args:
-      displacement: The displacement function for the space.
-      sigma: A scalar that sets the distance scale between neighbors.
-      A: A scalar that determines the scale of two-body term.
-      B: A scalar that determines the scale of the :math:`1 / r^p` term.
-      lam: A scalar that determines the scale of the three-body term.
-      epsilon: A scalar that sets the total energy scale.
-      gamma: A scalar used to fit the angle interaction.
-      three_body_strength:
-        A scalar that determines the relative strength
-        of the angular interaction. Default value is `1.0`, which works well
-        for the diamond crystal and liquid phases. `1.5` and `2.0` have been used
-        to model amorphous silicon.
-    Returns:
-      A function that computes the total energy.
+  Args:
+    displacement: The displacement function for the space.
+    sigma: A scalar that sets the distance scale between neighbors.
+    A: A scalar that determines the scale of two-body term.
+    B: A scalar that determines the scale of the :math:`1 / r^p` term.
+    lam: A scalar that determines the scale of the three-body term.
+    epsilon: A scalar that sets the total energy scale.
+    gamma: A scalar used to fit the angle interaction.
+    three_body_strength:
+      A scalar that determines the relative strength
+      of the angular interaction. Default value is `1.0`, which works well
+      for the diamond crystal and liquid phases. `1.5` and `2.0` have been used
+      to model amorphous silicon.
+  Returns:
+    A function that computes the total energy.
 
-    .. rubric:: References
-    .. [#stillinger] Stillinger, Frank H., and Thomas A. Weber. "Computer
-      simulation of local order in condensed phases of silicon."
-      Physical review B 31.8 (1985): 5262.
-    .. [#holender] Holender, J. M., and G. J. Morgan. "Generation of a large
-      structure (105 atoms) of amorphous Si using molecular dynamics." Journal of
-      Physics: Condensed Matter 3.38 (1991): 7241.
-    .. [#barkema] Barkema, G. T., and Normand Mousseau. "Event-based relaxation of
-      continuous disordered systems." Physical review letters 77.21 (1996): 4358.
-    """
-    two_body_fn = partial(_sw_radial_interaction, sigma, B, cutoff)
-    three_body_fn = partial(_sw_angle_interaction, gamma, sigma, cutoff)
-    three_body_fn = vmap(vmap(vmap(three_body_fn, (0, None)), (None, 0)))
+  .. rubric:: References
+  .. [#stillinger] Stillinger, Frank H., and Thomas A. Weber. "Computer
+    simulation of local order in condensed phases of silicon."
+    Physical review B 31.8 (1985): 5262.
+  .. [#holender] Holender, J. M., and G. J. Morgan. "Generation of a large
+    structure (105 atoms) of amorphous Si using molecular dynamics." Journal of
+    Physics: Condensed Matter 3.38 (1991): 7241.
+  .. [#barkema] Barkema, G. T., and Normand Mousseau. "Event-based relaxation of
+    continuous disordered systems." Physical review letters 77.21 (1996): 4358.
+  """
+  two_body_fn = partial(_sw_radial_interaction, sigma, B, cutoff)
+  three_body_fn = partial(_sw_angle_interaction, gamma, sigma, cutoff)
+  three_body_fn = vmap(vmap(vmap(three_body_fn, (0, None)), (None, 0)))
 
   def compute_fn(R, **kwargs):
     d = partial(displacement, **kwargs)
@@ -941,9 +940,9 @@ def stillinger_weber_neighbor_list(
     **neighbor_kwargs,
   )
 
-    def compute_fn(R, neighbor, **kwargs):
-        d = partial(displacement, **kwargs)
-        mask = partition.neighbor_list_mask(neighbor)
+  def compute_fn(R, neighbor, **kwargs):
+    d = partial(displacement, **kwargs)
+    mask = partition.neighbor_list_mask(neighbor)
 
     if neighbor.format is partition.Dense:
       _three_body_fn = vmap(vmap(vmap(three_body_fn, (0, None)), (None, 0)))
@@ -968,84 +967,83 @@ def stillinger_weber_neighbor_list(
 
 
 def load_lammps_tersoff_parameters(file: TextIO) -> Array:
-    """.. _ts-lammps:
+  """.. _ts-lammps:
 
-    Reads Tersoff parameters from a LAMMPS file and returns parameter tables.
+  Reads Tersoff parameters from a LAMMPS file and returns parameter tables.
 
-    This function reads multi-element original Tersoff potential parameters
-    from a file.
+  This function reads multi-element original Tersoff potential parameters
+  from a file.
 
-    Args:
-      file: A parameter file that is written with lammps format.
+  Args:
+    file: A parameter file that is written with lammps format.
 
-    Returns:
-      params: An array that contains Tersoff parameters.
-    """
-    # start to read file.
-    # todo: params_per_line becomes input variables.
-    #       depending on the various type of tersoff model.
-    params = []
-    params_per_line = 17
+  Returns:
+    params: An array that contains Tersoff parameters.
+  """
+  # start to read file.
+  # todo: params_per_line becomes input variables.
+  #       depending on the various type of tersoff model.
+  params = []
+  params_per_line = 17
 
-    # read parameters.
-    # skip if the line has \# or empty
-    # if the number of parameters in one line is less than params_per_line,
-    # additional line is appended to match.
-    skip = False
-    for line in file.read().split("\n"):
-        words = line.strip().split()
-        nwords = len(words)
-        if "#" in words or nwords == 0:
-            continue
+  # read parameters.
+  # skip if the line has \# or empty
+  # if the number of parameters in one line is less than params_per_line,
+  # additional line is appended to match.
+  skip = False
+  for line in file.read().split('\n'):
+    words = line.strip().split()
+    nwords = len(words)
+    if '#' in words or nwords == 0:
+      continue
 
-        if nwords < params_per_line and skip is False:
-            line_keep = line
-            skip = True
-            continue
+    if nwords < params_per_line and skip is False:
+      line_keep = line
+      skip = True
+      continue
 
-        line_keep += " " + line
-        words = line_keep.strip().split()
-        nwords = len(words)
+    line_keep += ' ' + line
+    words = line_keep.strip().split()
+    nwords = len(words)
 
-    if nwords != params_per_line:
-      raise ValueError(
-        'Incorrect format: %d not in %d' % (nwords, params_per_line)
-      )
-    else:
-      skip = False
-
-    words[3:] = f64(words[3:])
-    params.append(
-      {
-        'element1': words[0],
-        'element2': words[1],
-        'element3': words[2],
-        'mTf': words[3],
-        'gamma': words[4],
-        'lam3': words[5],
-        'cTf': words[6],
-        'dTf': words[7],
-        'hTf': words[8],
-        'nTf': words[9],
-        'beta': words[10],
-        'lam2': words[11],
-        'B': words[12],
-        'R': words[13],
-        'D': words[14],
-        'lam1': words[15],
-        'A': words[16],
-      }
+  if nwords != params_per_line:
+    raise ValueError(
+      'Incorrect format: %d not in %d' % (nwords, params_per_line)
     )
+  else:
+    skip = False
+
+  words[3:] = f64(words[3:])
+  params.append(
+    {
+      'element1': words[0],
+      'element2': words[1],
+      'element3': words[2],
+      'mTf': words[3],
+      'gamma': words[4],
+      'lam3': words[5],
+      'cTf': words[6],
+      'dTf': words[7],
+      'hTf': words[8],
+      'nTf': words[9],
+      'beta': words[10],
+      'lam2': words[11],
+      'B': words[12],
+      'R': words[13],
+      'D': words[14],
+      'lam1': words[15],
+      'A': words[16],
+    }
+  )
   return params
 
 
-
 def _ters_cutoff(dr, R, D) -> Array:
-    """The cut-off function of the Tersoff potential.
-    Args:
-      R: A Parameter that is the average of inner and outer cutoff radii
-      D: A Parameter that is the half of the difference
-         between inner and outer cutoff radii
+  """The cut-off function of the Tersoff potential.
+  Args:
+    R: A Parameter that is the average of inner and outer cutoff radii
+    D: A Parameter that is the half of the difference
+        between inner and outer cutoff radii
 
   Returns:
     cut-off values
@@ -1065,35 +1063,35 @@ def _ters_bij(R, D, c, d, h, lam3, beta, n, m, dRij, dRik, mask_ijk) -> Array:
     D: A Parameter that is the half of the difference
        between inner and outer cutoff radii
 
-      # parameters related to the angle Penalty function in the bond-order
-      # function
-      # h(\theta) = 1 + c^2/d^2 + c^2/(d^2 + (h - cos(\theta)^2))
-      c: A Parameter that determines angle penalty
-      d: A Parameter that determines angle penalty
-      h: A cosine value that is a desirable angle between 3 atoms.
+    # parameters related to the angle Penalty function in the bond-order
+    # function
+    # h(\theta) = 1 + c^2/d^2 + c^2/(d^2 + (h - cos(\theta)^2))
+    c: A Parameter that determines angle penalty
+    d: A Parameter that determines angle penalty
+    h: A cosine value that is a desirable angle between 3 atoms.
 
-      # parameters related to the distance penalty function in the bond-order
-      # function
-      lam3: A Parameter that determines distance penalty value
-      m: A Parameter that determines distance penalty value
+    # parameters related to the distance penalty function in the bond-order
+    # function
+    lam3: A Parameter that determines distance penalty value
+    m: A Parameter that determines distance penalty value
 
-      # parameters related to the bond-order function
-      beta: A Parameter that determines bond-order value
-      n: A Parameter that determines bond-order value
+    # parameters related to the bond-order function
+    beta: A Parameter that determines bond-order value
+    n: A Parameter that determines bond-order value
 
-      dRij: A ndarray of shape [n, neighbors, dim] of pairwise distances between
-       particles
-      dRik: A ndarray of shape [n, neighbors, dim] of pairwise distances between
-        particles TODO - Currently, it is the same as the dRij
+    dRij: A ndarray of shape [n, neighbors, dim] of pairwise distances between
+      particles
+    dRik: A ndarray of shape [n, neighbors, dim] of pairwise distances between
+      particles TODO - Currently, it is the same as the dRij
 
 
-    Returns:
-      Bond-order values between i and j atoms
-    """
-    drij = space.distance(dRij)
-    drik = space.distance(dRik)
+  Returns:
+    Bond-order values between i and j atoms
+  """
+  drij = space.distance(dRij)
+  drik = space.distance(dRik)
 
-    mask_ijk *= (1 - jnp.eye(mask_ijk.shape[-1], dtype=dRij.dtype))[None, :, :]
+  mask_ijk *= (1 - jnp.eye(mask_ijk.shape[-1], dtype=dRij.dtype))[None, :, :]
 
   # compute g_ijk - angle penalty value
   costheta = quantity.cosine_angles(dRij)
@@ -1104,8 +1102,8 @@ def _ters_bij(R, D, c, d, h, lam3, beta, n, m, dRij, dRik, mask_ijk) -> Array:
   dr_diff = jnp.where(mask_ijk, dr_diff, 0)
   explr3 = jnp.exp(lam3**m * dr_diff**m)
 
-    # compute fC with dr_ik
-    fC = _ters_cutoff(drik, R, D)
+  # compute fC with dr_ik
+  fC = _ters_cutoff(drik, R, D)
 
   # compute zeta without diagonal term
   prod = jnp.where(mask_ijk, gijk * explr3, 0)
@@ -1140,31 +1138,31 @@ def _ters_attractive(
     D: A Parameter that is the half of the difference.
        between inner and outer cutoff radii.
 
-      # parameters related to the angle Penalty function in the bond-order
-      # function.
-      # h(\theta) = 1 + c^2/d^2 + c^2/(d^2 + (h - cos(\theta)^2))
-      c: A Parameter that determines angle penalty.
-      d: A Parameter that determines angle penalty.
-      h: A cosine value that is a desirable angle between 3 atoms.
+    # parameters related to the angle Penalty function in the bond-order
+    # function.
+    # h(\theta) = 1 + c^2/d^2 + c^2/(d^2 + (h - cos(\theta)^2))
+    c: A Parameter that determines angle penalty.
+    d: A Parameter that determines angle penalty.
+    h: A cosine value that is a desirable angle between 3 atoms.
 
-      # parameters related to the distance penalty function in the bond-order
-      # function.
-      lam3: A Parameter that determines distance penalty value.
-      m: A Parameter that determines distance penalty value.
+    # parameters related to the distance penalty function in the bond-order
+    # function.
+    lam3: A Parameter that determines distance penalty value.
+    m: A Parameter that determines distance penalty value.
 
-      # parameters related to the bond-order function
-      beta: A Parameter that determines bond-order value.
-      n: A Parameter that determines bond-order value.
+    # parameters related to the bond-order function
+    beta: A Parameter that determines bond-order value.
+    n: A Parameter that determines bond-order value.
 
-    Returns:
-      Attractive interaction energy for one pair of neighbors.
-    """
+  Returns:
+    Attractive interaction energy for one pair of neighbors.
+  """
 
-    dr12 = space.distance(dR12)
-    fC = _ters_cutoff(dr12, R, D)
-    fA = -B * jnp.exp(-lam2 * dr12)
-    bij = _ters_bij(R, D, c, d, h, lam3, beta, n, m, dR12, dR13, mask_ijk)
-    return 0.5 * fC * bij * fA
+  dr12 = space.distance(dR12)
+  fC = _ters_cutoff(dr12, R, D)
+  fA = -B * jnp.exp(-lam2 * dr12)
+  bij = _ters_bij(R, D, c, d, h, lam3, beta, n, m, dR12, dR13, mask_ijk)
+  return 0.5 * fC * bij * fA
 
 
 def _ters_repulsive(A: f64, lam1: f64, R: f64, D: f64, dr: Array) -> Array:
@@ -1179,9 +1177,9 @@ def _ters_repulsive(A: f64, lam1: f64, R: f64, D: f64, dr: Array) -> Array:
     Repulsive interaction energy for one pair of neighbors.
   """
 
-    fC = _ters_cutoff(dr, R, D)
-    fR = A * jnp.exp(-lam1 * dr)
-    return 0.5 * fC * fR
+  fC = _ters_cutoff(dr, R, D)
+  fR = A * jnp.exp(-lam1 * dr)
+  return 0.5 * fC * fR
 
 
 def tersoff(
@@ -1278,38 +1276,38 @@ def tersoff_neighbor_list(
 ) -> Tuple[NeighborFn, Callable[[Array, NeighborList], Array]]:
   """Computes the Tersoff potential.
 
-    The Tersoff potential [1] which is commonly used to model
-    semiconducting materials. The Tersoff potential was originally proposed to
-    model various types of lattice with a simple functional form.
-    For this reason, Tersoff model was introduced bond-order function
-    to determine the strength of repulsive and attractive forces between atoms.
+  The Tersoff potential [1] which is commonly used to model
+  semiconducting materials. The Tersoff potential was originally proposed to
+  model various types of lattice with a simple functional form.
+  For this reason, Tersoff model was introduced bond-order function
+  to determine the strength of repulsive and attractive forces between atoms.
 
-    Args:
-      displacement: The displacement function for the space.
-      box_size: A float or vector specifying the size of the simulation box.
-      params: A dictionary of parameters for the tersoff potential. Usually this
-        should be loaded from lammps using the
-        :ref:`load_lammps_tersoff_parameters <ts-lammps>` function.
-      species: An array of species. Currently only `None` is supported.
-      dr_threshold: A distance threshold that controls how often the neighor list
-        is recomputed.
-      fractional_coordinates: A boolean specifying whether coordinates are stored
-        in the unit cube.
-      format: Format of the neighbor list.
+  Args:
+    displacement: The displacement function for the space.
+    box_size: A float or vector specifying the size of the simulation box.
+    params: A dictionary of parameters for the tersoff potential. Usually this
+      should be loaded from lammps using the
+      :ref:`load_lammps_tersoff_parameters <ts-lammps>` function.
+    species: An array of species. Currently only `None` is supported.
+    dr_threshold: A distance threshold that controls how often the neighor list
+      is recomputed.
+    fractional_coordinates: A boolean specifying whether coordinates are stored
+      in the unit cube.
+    format: Format of the neighbor list.
 
-    Returns:
-      A pair of functions. One that builds the neighbor list and one that
-      computes the total energy.
+  Returns:
+    A pair of functions. One that builds the neighbor list and one that
+    computes the total energy.
 
-    [1] J. Tersoff "New empirical approach for the structure and energy of
-    covalent systems" Physical review B 37.12 (1988): 6991.
-    """
-    # check number of parameters set
-    if species is None:
-        params = params[0]
-        nparams = 1
-    else:
-        raise NotImplementedError("Multiple species were not implemented yet.")
+  [1] J. Tersoff "New empirical approach for the structure and energy of
+  covalent systems" Physical review B 37.12 (1988): 6991.
+  """
+  # check number of parameters set
+  if species is None:
+    params = params[0]
+    nparams = 1
+  else:
+    raise NotImplementedError('Multiple species were not implemented yet.')
 
   # define a repulsive and an attractive function with given parameters
   repulsive_fn = partial(
@@ -1348,11 +1346,11 @@ def tersoff_neighbor_list(
       'Tersoff potential only implemented with Dense neighbor lists.'
     )
 
-    # define compute functions
-    def compute_fn(R, neighbor, **kwargs):
-        d = partial(displacement, **kwargs)
-        mask = partition.neighbor_list_mask(neighbor, mask_self=True)
-        mask_ijk = mask[:, None, :] * mask[:, :, None]
+  # define compute functions
+  def compute_fn(R, neighbor, **kwargs):
+    d = partial(displacement, **kwargs)
+    mask = partition.neighbor_list_mask(neighbor, mask_self=True)
+    mask_ijk = mask[:, None, :] * mask[:, :, None]
 
     dR = space.map_neighbor(d)(R, R[neighbor.idx])
     dr = space.distance(dR)
@@ -1385,7 +1383,6 @@ def tersoff_from_lammps_parameters_neighbor_list(
 
 
 # (EDIP) Environment-dependent interatomic potential
-
 
 
 def _edip_cutoff_function(r: Array, cutoff: f64, c: f64, alpha: f64) -> Array:
@@ -1618,10 +1615,9 @@ def edip_neighbor_list(
         'EDIP potential only implemented with Dense neighbor lists.'
       )
 
-        return first_term + second_term
+    return first_term + second_term
 
-    return neighbor_fn, compute_fn
-
+  return neighbor_fn, compute_fn
 
 
 # Embedded Atom Method
@@ -1637,43 +1633,43 @@ def load_lammps_eam_parameters(
 ]:
   """Reads EAM parameters from a LAMMPS file and returns relevant spline fits.
 
-    This function reads single-element EAM potential fit parameters from a file
-    in DYNAMO funcl format. In summary, the file contains:
+  This function reads single-element EAM potential fit parameters from a file
+  in DYNAMO funcl format. In summary, the file contains:
 
-    * Line 1-3: Comments
-    * Line 4: Number of elements and the element type
-    * Line 5: The number of charge values that the embedding energy is evaluated
-      on (`num_drho`), interval between the charge values (`drho`), the number of
-      distances the pairwise energy and the charge density is evaluated on
-      (`num_dr`), the interval between these distances (`dr`), and the cutoff
-      distance (`cutoff`).
+  * Line 1-3: Comments
+  * Line 4: Number of elements and the element type
+  * Line 5: The number of charge values that the embedding energy is evaluated
+    on (`num_drho`), interval between the charge values (`drho`), the number of
+    distances the pairwise energy and the charge density is evaluated on
+    (`num_dr`), the interval between these distances (`dr`), and the cutoff
+    distance (`cutoff`).
 
-    The lines that come after are the embedding function evaluated on `num_drho`
-    charge values, charge function evaluated at `num_dr` distance values, and
-    pairwise energy evaluated at `num_dr` distance values. Note that the pairwise
-    energy is multiplied by distance (in units of eV x Angstroms).
+  The lines that come after are the embedding function evaluated on `num_drho`
+  charge values, charge function evaluated at `num_dr` distance values, and
+  pairwise energy evaluated at `num_dr` distance values. Note that the pairwise
+  energy is multiplied by distance (in units of eV x Angstroms).
 
-    For more details of the DYNAMO file format, see:
-    https://sites.google.com/a/ncsu.edu/cjobrien/tutorials-and-guides/eam
+  For more details of the DYNAMO file format, see:
+  https://sites.google.com/a/ncsu.edu/cjobrien/tutorials-and-guides/eam
 
-    Args:
-      f: File handle for the EAM parameters text file.
+  Args:
+    f: File handle for the EAM parameters text file.
 
-    Returns:
-      A tuple containing three functions and a cutoff distance.
+  Returns:
+    A tuple containing three functions and a cutoff distance.
 
-    charge_fn:
-      A function that takes an ndarray of shape `[n, m]` of distances
-      between particles and returns a matrix of charge contributions.
-    embedding_fn:
-      Function that takes an ndarray of shape `[n]` of charges and
-      returns an ndarray of shape `[n]` of the energy cost of embedding an atom
-      into the charge.
-    pairwise_fn:
-      A function that takes an ndarray of shape `[n, m]` of distances
-      and returns an ndarray of shape `[n, m]` of pairwise energies.
-    cutoff:
-      Cutoff distance for the `embedding_fn` and `pairwise_fn`.
+  charge_fn:
+    A function that takes an ndarray of shape `[n, m]` of distances
+    between particles and returns a matrix of charge contributions.
+  embedding_fn:
+    Function that takes an ndarray of shape `[n]` of charges and
+    returns an ndarray of shape `[n]` of the energy cost of embedding an atom
+    into the charge.
+  pairwise_fn:
+    A function that takes an ndarray of shape `[n, m]` of distances
+    and returns an ndarray of shape `[n, m]` of pairwise energies.
+  cutoff:
+    Cutoff distance for the `embedding_fn` and `pairwise_fn`.
   """
   raw_text = file.read().split('\n')
   if 'setfl' not in raw_text[0]:
@@ -1708,185 +1704,188 @@ def load_lammps_eam_parameters(
 
 
 def load_lammps_eam_parameters_alloy(
-    file: TextIO,
+  file: TextIO,
 ) -> Tuple[
-    Callable[[Array], Array], Callable[[Array], Array], Callable[[Array], Array], float
+  Callable[[Array], Array],
+  Callable[[Array], Array],
+  Callable[[Array], Array],
+  float,
 ]:
-    raw_text = file.read().split("\n")
-    # for i, line in enumerate(raw_text[:10]):
-    # print(f"line {i}: {line}")
-    if "setfl" not in raw_text[0]:
-        raise ValueError("File format is incorrect, expected LAMMPS setfl format.")
-    species_count, *elements = [
-        int(v) if i == 0 else i for i, v in enumerate(raw_text[3].split())
-    ]
-    temp_params = raw_text[4].split()
-    num_drho, drho, num_dr, dr, cutoff = (
-        int(temp_params[0]),
-        float(temp_params[1]),
-        int(temp_params[2]),
-        float(temp_params[3]),
-        float(temp_params[4]),
-    )
+  raw_text = file.read().split('\n')
+  # for i, line in enumerate(raw_text[:10]):
+  # print(f"line {i}: {line}")
+  if 'setfl' not in raw_text[0]:
+    raise ValueError('File format is incorrect, expected LAMMPS setfl format.')
+  species_count, *elements = [
+    int(v) if i == 0 else i for i, v in enumerate(raw_text[3].split())
+  ]
+  temp_params = raw_text[4].split()
+  num_drho, drho, num_dr, dr, cutoff = (
+    int(temp_params[0]),
+    float(temp_params[1]),
+    int(temp_params[2]),
+    float(temp_params[3]),
+    float(temp_params[4]),
+  )
 
-    # print(f"{temp_params = }")
+  # print(f"{temp_params = }")
+  # print(f"{num_drho = }")
+  # print(f"{drho = }")
+  # print(f"{num_dr = }")
+  # print(f"{dr = }")
+  # print(f"{cutoff = }")
+
+  # Read array values, taking into account that there may be more than one value on each line
+  def parse_embedding_charge_block(start, end):
+    if len(re.split(' +', raw_text[start + 1].strip())) > 1:
+      block = [
+        maybe_downcast([float(i) for i in re.split(' +', rt.strip())])
+        for rt in raw_text[start + 1 : end]
+      ]
+      block = jnp.concatenate(block)
+    else:
+      block = maybe_downcast([float(i) for i in raw_text[start + 1 : end]])
+
+    embedding_fn = interpolate.spline(block[:num_drho], drho)
+    charge_fn = interpolate.spline(block[num_drho : num_drho + num_dr], dr)
+
+    return embedding_fn, charge_fn
+
+  # Handle pairwise interactions
+  def parse_pairwise_block(start, end):
+    if len(re.split(' +', raw_text[start].strip())) > 1:
+      block = [
+        maybe_downcast([float(i) for i in re.split(' +', rt.strip())])
+        for rt in raw_text[start:end]
+      ]
+      block = jnp.concatenate(block)
+    else:
+      block = maybe_downcast([float(i) for i in raw_text[start:end]])
+
+    # LAMMPS EAM parameters file lists pairwise energies after multiplying by distance, in units of eV*Angstrom. We
+    # divide the energy by distance below,
+    distances = jnp.arange(num_dr) * dr
+    # Prevent dividing by zero at zero distance, which will not affect the calculation
+    distances = jnp.where(distances == 0, f32(0.001), distances)
+    pairwise_fn = interpolate.spline(block[:num_dr] / distances, dr)
+
+    return pairwise_fn
+
+  charge_fns, embedding_fns, pairwise_fns = [], [], []
+
+  # print(f"{species_count = }")
+
+  for i in range(species_count):
+    # print(f"{i = }")
+    # Need to take into account the possibility of having multiple values on each line, check with len(re.split(" +", raw_text[start].strip()))
+    data_start = 5
+    values_per_line = len(re.split(' +', raw_text[data_start + 1].strip()))
+    block_length = int((num_drho + num_dr) / values_per_line) + 1
+    # print(f"{data_start = }")
+    # print(f"{values_per_line = }")
     # print(f"{num_drho = }")
-    # print(f"{drho = }")
     # print(f"{num_dr = }")
-    # print(f"{dr = }")
-    # print(f"{cutoff = }")
+    # print(f"{block_length = }")
+    # Parse embedding and density blocks for element i
+    # Pass in line numbers for start and end of blocks e.g.
+    # [6, 1007)
+    # [1007, 2008)
+    # [2008, 3009)
+    embedding_fn, charge_fn = parse_embedding_charge_block(
+      data_start + i * block_length, data_start + (i + 1) * block_length
+    )
+    # print(f"{data_start + (i + 1) * block_length = }")
+    charge_fns.append(charge_fn)
+    embedding_fns.append(embedding_fn)
+    # print(charge_fn, embedding_fn)
 
-    # Read array values, taking into account that there may be more than one value on each line
-    def parse_embedding_charge_block(start, end):
-        if len(re.split(" +", raw_text[start + 1].strip())) > 1:
-            block = [
-                maybe_downcast([float(i) for i in re.split(" +", rt.strip())])
-                for rt in raw_text[start + 1 : end]
-            ]
-            block = jnp.concatenate(block)
-        else:
-            block = maybe_downcast([float(i) for i in raw_text[start + 1 : end]])
+    for j in range(i + 1):
+      # print(f"{j = }")
+      # Parse pairwise blocks for all element pairs i,j (where j<=i as per the setfl spec.)
+      # j = (0,1,2,...,i)
+      pairwise_data_start = species_count * block_length + data_start
+      pairwise_block_length = int(num_dr / values_per_line)
+      # print(f"{pairwise_data_start = }")
+      # print(f"{pairwise_block_length = }")
+      # print(
+      #     f"{int(pairwise_data_start + (i * (i + 1) / 2 + j) * pairwise_block_length) = }"
+      # )
+      pairwise_fn = parse_pairwise_block(
+        int(
+          pairwise_data_start + (i * (i + 1) / 2 + j) * pairwise_block_length
+        ),
+        int(
+          pairwise_data_start
+          + ((i * (i + 1) / 2 + j) + 1) * pairwise_block_length
+        ),
+      )  # Need contribution from i here as below
+      # Count as
+      # (1,0) -> 1
+      # (1,1) -> 2
+      # (2,0) -> 3
+      # (2,1) -> 4
+      # (2,2) -> 5
+      # (3,0) -> 6
+      # etc.
+      # Number in sequence = ith triangle number + j
+      # i.e. i(i+1)/2 + j
+      pairwise_fns.append(pairwise_fn)
+      # print(embedding_fn)
 
-        embedding_fn = interpolate.spline(block[:num_drho], drho)
-        charge_fn = interpolate.spline(block[num_drho : num_drho + num_dr], dr)
-
-        return embedding_fn, charge_fn
-
-    # Handle pairwise interactions
-    def parse_pairwise_block(start, end):
-        if len(re.split(" +", raw_text[start].strip())) > 1:
-            block = [
-                maybe_downcast([float(i) for i in re.split(" +", rt.strip())])
-                for rt in raw_text[start:end]
-            ]
-            block = jnp.concatenate(block)
-        else:
-            block = maybe_downcast([float(i) for i in raw_text[start:end]])
-
-        # LAMMPS EAM parameters file lists pairwise energies after multiplying by distance, in units of eV*Angstrom. We
-        # divide the energy by distance below,
-        distances = jnp.arange(num_dr) * dr
-        # Prevent dividing by zero at zero distance, which will not affect the calculation
-        distances = jnp.where(distances == 0, f32(0.001), distances)
-        pairwise_fn = interpolate.spline(block[:num_dr] / distances, dr)
-
-        return pairwise_fn
-
-    charge_fns, embedding_fns, pairwise_fns = [], [], []
-
-    # print(f"{species_count = }")
-
-    for i in range(species_count):
-        # print(f"{i = }")
-        # Need to take into account the possibility of having multiple values on each line, check with len(re.split(" +", raw_text[start].strip()))
-        data_start = 5
-        values_per_line = len(re.split(" +", raw_text[data_start + 1].strip()))
-        block_length = int((num_drho + num_dr) / values_per_line) + 1
-        # print(f"{data_start = }")
-        # print(f"{values_per_line = }")
-        # print(f"{num_drho = }")
-        # print(f"{num_dr = }")
-        # print(f"{block_length = }")
-        # Parse embedding and density blocks for element i
-        # Pass in line numbers for start and end of blocks e.g.
-        # [6, 1007)
-        # [1007, 2008)
-        # [2008, 3009)
-        embedding_fn, charge_fn = parse_embedding_charge_block(
-            data_start + i * block_length, data_start + (i + 1) * block_length
-        )
-        # print(f"{data_start + (i + 1) * block_length = }")
-        charge_fns.append(charge_fn)
-        embedding_fns.append(embedding_fn)
-        # print(charge_fn, embedding_fn)
-
-        for j in range(i + 1):
-            # print(f"{j = }")
-            # Parse pairwise blocks for all element pairs i,j (where j<=i as per the setfl spec.)
-            # j = (0,1,2,...,i)
-            pairwise_data_start = species_count * block_length + data_start
-            pairwise_block_length = int(num_dr / values_per_line)
-            # print(f"{pairwise_data_start = }")
-            # print(f"{pairwise_block_length = }")
-            # print(
-            #     f"{int(pairwise_data_start + (i * (i + 1) / 2 + j) * pairwise_block_length) = }"
-            # )
-            pairwise_fn = parse_pairwise_block(
-                int(
-                    pairwise_data_start + (i * (i + 1) / 2 + j) * pairwise_block_length
-                ),
-                int(
-                    pairwise_data_start
-                    + ((i * (i + 1) / 2 + j) + 1) * pairwise_block_length
-                ),
-            )  # Need contribution from i here as below
-            # Count as
-            # (1,0) -> 1
-            # (1,1) -> 2
-            # (2,0) -> 3
-            # (2,1) -> 4
-            # (2,2) -> 5
-            # (3,0) -> 6
-            # etc.
-            # Number in sequence = ith triangle number + j
-            # i.e. i(i+1)/2 + j
-            pairwise_fns.append(pairwise_fn)
-            # print(embedding_fn)
-
-    return charge_fns, embedding_fns, pairwise_fns, cutoff
+  return charge_fns, embedding_fns, pairwise_fns, cutoff
 
 
 def eam(
-    displacement_or_metric: DisplacementOrMetricFn,
-    charge_fn: Callable[[Array], Array],
-    embedding_fn: Callable[[Array], Array],
-    pairwise_fn: Callable[[Array], Array],
-    axis: Optional[Tuple[int, ...]] = None,
+  displacement_or_metric: DisplacementOrMetricFn,
+  charge_fn: Callable[[Array], Array],
+  embedding_fn: Callable[[Array], Array],
+  pairwise_fn: Callable[[Array], Array],
+  axis: Optional[Tuple[int, ...]] = None,
 ) -> Callable[[Array], Array]:
-    """.. _eam-pot:
+  """.. _eam-pot:
 
-    Interatomic potential as approximated by embedded atom model (EAM).
+  Interatomic potential as approximated by embedded atom model (EAM).
 
-    This code implements the EAM approximation to interactions between metallic
-    atoms. In EAM, the potential energy of an atom is given by two terms: a
-    pairwise energy and an embedding energy due to the interaction between the
-    atom and background charge density. The EAM potential for a single atomic
-    species is often determined by three functions:
+  This code implements the EAM approximation to interactions between metallic
+  atoms. In EAM, the potential energy of an atom is given by two terms: a
+  pairwise energy and an embedding energy due to the interaction between the
+  atom and background charge density. The EAM potential for a single atomic
+  species is often determined by three functions:
 
-    1) Charge density contribution of an atom as a function of distance.
-    2) Energy of embedding an atom in the background charge density.
-    3) Pairwise energy.
+  1) Charge density contribution of an atom as a function of distance.
+  2) Energy of embedding an atom in the background charge density.
+  3) Pairwise energy.
 
-    These three functions are usually provided as spline fits, and we follow the
-    implementation and spline fits given by Mishin et al. [#mishin]_
-    Note that in current implementation, the three functions listed above
-    can also be expressed by a any function with the correct signature,
-    including neural networks.
+  These three functions are usually provided as spline fits, and we follow the
+  implementation and spline fits given by Mishin et al. [#mishin]_
+  Note that in current implementation, the three functions listed above
+  can also be expressed by a any function with the correct signature,
+  including neural networks.
 
-    Args:
-      displacement: A function that produces an ndarray of shape `[n, m,
-        spatial_dimension]` of particle displacements from particle positions
-        specified as an ndarray of shape `[n, spatial_dimension]` and `[m,
-        spatial_dimension]` respectively.
-      box_size: The size of the simulation box.
-      charge_fn: A function that takes an ndarray of shape `[n, m]` of distances
-        between particles and returns a matrix of charge contributions.
-      embedding_fn: Function that takes an ndarray of shape `[n]` of charges and
-        returns an ndarray of shape `[n]` of the energy cost of embedding an atom
-        into the charge.
-      pairwise_fn: A function that takes an ndarray of shape `[n, m]` of distances
-        and returns an ndarray of shape `[n, m]` of pairwise energies.
-      cutoff: A float specifying the maximum interaction distance.
-      dr_threshold: A float specifying the halo in the neighbor list.
-      axis: Specifies which axis the total energy should be summed over.
-      fractional_coordinates: A boolean specifying whether or not the coordinates
-        will be in the unit cube.
-      format: The format of the neighbor list.
+  Args:
+    displacement: A function that produces an ndarray of shape `[n, m,
+      spatial_dimension]` of particle displacements from particle positions
+      specified as an ndarray of shape `[n, spatial_dimension]` and `[m,
+      spatial_dimension]` respectively.
+    box_size: The size of the simulation box.
+    charge_fn: A function that takes an ndarray of shape `[n, m]` of distances
+      between particles and returns a matrix of charge contributions.
+    embedding_fn: Function that takes an ndarray of shape `[n]` of charges and
+      returns an ndarray of shape `[n]` of the energy cost of embedding an atom
+      into the charge.
+    pairwise_fn: A function that takes an ndarray of shape `[n, m]` of distances
+      and returns an ndarray of shape `[n, m]` of pairwise energies.
+    cutoff: A float specifying the maximum interaction distance.
+    dr_threshold: A float specifying the halo in the neighbor list.
+    axis: Specifies which axis the total energy should be summed over.
+    fractional_coordinates: A boolean specifying whether or not the coordinates
+      will be in the unit cube.
+    format: The format of the neighbor list.
 
-    Returns:
-      A tuple containing a function to build the neighbor list and function that
-      computes the EAM energy of a set of atoms with positions given by an
-      `[n, spatial_dimension]` ndarray.
+  Returns:
+    A tuple containing a function to build the neighbor list and function that
+    computes the EAM energy of a set of atoms with positions given by an
+    `[n, spatial_dimension]` ndarray.
 
   .. rubric:: References
   .. [#mishin] Y. Mishin, D. Farkas, M.J. Mehl, DA Papaconstantopoulos, "Interatomic
@@ -1907,264 +1906,266 @@ def eam(
       embedding_energy + pairwise_energy, axis=axis
     )
 
-    return energy
+  return energy
 
 
 def eam_alloy(
-    displacement_or_metric: DisplacementOrMetricFn,
-    charge_fns: list[Callable[[Array], Array]],
-    embedding_fns: list[Callable[[Array], Array]],
-    pairwise_fns: list[list[Callable[[Array], Array]]],
-    cutoff,
-    species=None,
-    axis: Optional[Tuple[int, ...]] = None,
+  displacement_or_metric: DisplacementOrMetricFn,
+  charge_fns: list[Callable[[Array], Array]],
+  embedding_fns: list[Callable[[Array], Array]],
+  pairwise_fns: list[list[Callable[[Array], Array]]],
+  cutoff,
+  species=None,
+  axis: Optional[Tuple[int, ...]] = None,
 ) -> Callable[[Array], Array]:
-    metric = space.canonicalize_displacement_or_metric(displacement_or_metric)
-    species_count = jnp.unique(species).shape[0]
-    jax.debug.print("Species count: {species_count}", species_count=species_count)
+  metric = space.canonicalize_displacement_or_metric(displacement_or_metric)
+  species_count = jnp.unique(species).shape[0]
+  jax.debug.print('Species count: {species_count}', species_count=species_count)
 
-    def energy_fn(R, *, species, **kwargs):
-        d = partial(metric, **kwargs)
-        d_pair = space.map_product(d)
-        dr = d_pair(R, R)
+  def energy_fn(R, *, species, **kwargs):
+    d = partial(metric, **kwargs)
+    d_pair = space.map_product(d)
+    dr = d_pair(R, R)
 
-        jax.debug.print("dr: {dr}", dr=dr)
+    jax.debug.print('dr: {dr}', dr=dr)
 
-        cutoff_mask = jnp.where(dr < cutoff, True, False)
+    cutoff_mask = jnp.where(dr < cutoff, True, False)
 
-        embedding_energy = jnp.zeros((R.shape[0],), dtype=f32)
-        pairwise_energy = jnp.zeros((R.shape[0],), dtype=f32)
+    embedding_energy = jnp.zeros((R.shape[0],), dtype=f32)
+    pairwise_energy = jnp.zeros((R.shape[0],), dtype=f32)
 
-        # Logic for mapping across species adapted from smap.pair
-        for i in range(species_count):
-            Ri_mask = jnp.where(species == i, True, False)
+    # Logic for mapping across species adapted from smap.pair
+    for i in range(species_count):
+      Ri_mask = jnp.where(species == i, True, False)
 
-            dcharge = jnp.zeros((R.shape[0],))
+      dcharge = jnp.zeros((R.shape[0],))
 
-            for j in range(i + 1):
-                # We can't use arrays of dynamic size as below. Instead we can evaluate functions on the full d(R,R)
-                # arrays and then mask the results
-                # Ra = R[species == i]
-                # Rb = R[species == j]
-                # dr = space.map_product(d)(Ra, Rb)
+      for j in range(i + 1):
+        # We can't use arrays of dynamic size as below. Instead we can evaluate functions on the full d(R,R)
+        # arrays and then mask the results
+        # Ra = R[species == i]
+        # Rb = R[species == j]
+        # dr = space.map_product(d)(Ra, Rb)
 
-                Rj_mask = jnp.where(species == j, True, False)
+        Rj_mask = jnp.where(species == j, True, False)
 
-                pairwise_mask = Ri_mask[:, None] * Rj_mask
-                pairwise_mask = pairwise_mask * cutoff_mask
-                # jax.debug.print("{dr}", dr=dr)
+        pairwise_mask = Ri_mask[:, None] * Rj_mask
+        pairwise_mask = pairwise_mask * cutoff_mask
+        # jax.debug.print("{dr}", dr=dr)
 
-                if j == i:
-                    # If j == i, the diagonal of the (Ra, Ra) matrix will represent self-interactions, so we need to
-                    # mask the diagonal. We then separately need to halve the energy contribution, since the i, j
-                    # diagonal gets double-counted
-                    # charge_arr = charge_fns[i](dr) * dr_mask
-                    # dcharge = util.high_precision_sum(smap._diagonal_mask(charge_arr))
-                    charge_arr = (
-                        smap._diagonal_mask(charge_fns[j](dr)) * Rj_mask * cutoff_mask
-                    )
-                    dcharge += util.high_precision_sum(
-                        charge_arr,
-                        axis=1,
-                    )
-                    # dcharge = util.high_precision_sum(
-                    #     smap._diagonal_mask(charge_fns[i](dr)[dr_mask])
-                    # )
-                    # embedding_energy += embedding_fns[i](dcharge) * f32(0.5)
-                    # embedding_energy += embedding_fns[i](dcharge) * Ri_mask
+        if j == i:
+          # If j == i, the diagonal of the (Ra, Ra) matrix will represent self-interactions, so we need to
+          # mask the diagonal. We then separately need to halve the energy contribution, since the i, j
+          # diagonal gets double-counted
+          # charge_arr = charge_fns[i](dr) * dr_mask
+          # dcharge = util.high_precision_sum(smap._diagonal_mask(charge_arr))
+          charge_arr = (
+            smap._diagonal_mask(charge_fns[j](dr)) * Rj_mask * cutoff_mask
+          )
+          dcharge += util.high_precision_sum(
+            charge_arr,
+            axis=1,
+          )
+          # dcharge = util.high_precision_sum(
+          #     smap._diagonal_mask(charge_fns[i](dr)[dr_mask])
+          # )
+          # embedding_energy += embedding_fns[i](dcharge) * f32(0.5)
+          # embedding_energy += embedding_fns[i](dcharge) * Ri_mask
 
-                    # pairwise_energy += (
-                    #     util.high_precision_sum(
-                    #         smap._diagonal_mask(
-                    #             pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * dr_mask
-                    #         ),
-                    #         axis=1,
-                    #     )
-                    #     * f32(0.5)
-                    #     * f32(0.5)
-                    pairwise_energy += util.high_precision_sum(
-                        smap._diagonal_mask(
-                            pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * pairwise_mask
-                        ),
-                        axis=1,
-                    ) * f32(0.5)
+          # pairwise_energy += (
+          #     util.high_precision_sum(
+          #         smap._diagonal_mask(
+          #             pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * dr_mask
+          #         ),
+          #         axis=1,
+          #     )
+          #     * f32(0.5)
+          #     * f32(0.5)
+          pairwise_energy += util.high_precision_sum(
+            smap._diagonal_mask(
+              pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * pairwise_mask
+            ),
+            axis=1,
+          ) * f32(0.5)
 
-                else:
-                    # dcharge = util.high_precision_sum(
-                    #     smap._diagonal_mask(charge_fns[i](dr) * dr_mask), axis=1
-                    # )
-                    # embedding_energy += embedding_fns[i](dcharge)
-                    # pairwise_energy += util.high_precision_sum(
-                    #     smap._diagonal_mask(
-                    #         pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * dr_mask
-                    #     ),
-                    #     axis=1,
-                    # ) * f32(0.5)
-                    charge_arr = (
-                        smap._diagonal_mask(charge_fns[j](dr)) * Rj_mask * cutoff_mask
-                    )
-                    dcharge += util.high_precision_sum(
-                        charge_arr,
-                        axis=1,
-                    )
-                    pairwise_energy += util.high_precision_sum(
-                        smap._diagonal_mask(
-                            pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * pairwise_mask
-                        ),
-                        axis=1,
-                    ) * f32(0.5)
+        else:
+          # dcharge = util.high_precision_sum(
+          #     smap._diagonal_mask(charge_fns[i](dr) * dr_mask), axis=1
+          # )
+          # embedding_energy += embedding_fns[i](dcharge)
+          # pairwise_energy += util.high_precision_sum(
+          #     smap._diagonal_mask(
+          #         pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * dr_mask
+          #     ),
+          #     axis=1,
+          # ) * f32(0.5)
+          charge_arr = (
+            smap._diagonal_mask(charge_fns[j](dr)) * Rj_mask * cutoff_mask
+          )
+          dcharge += util.high_precision_sum(
+            charge_arr,
+            axis=1,
+          )
+          pairwise_energy += util.high_precision_sum(
+            smap._diagonal_mask(
+              pairwise_fns[int(i * (i + 1) / 2 + j)](dr) * pairwise_mask
+            ),
+            axis=1,
+          ) * f32(0.5)
 
-            embedding_energy += embedding_fns[i](dcharge) * Ri_mask
+      embedding_energy += embedding_fns[i](dcharge) * Ri_mask
 
-        return util.high_precision_sum(embedding_energy + pairwise_energy, axis=axis)
+    return util.high_precision_sum(
+      embedding_energy + pairwise_energy, axis=axis
+    )
 
-    return energy_fn
+  return energy_fn
 
 
 def eam_alloy_neighbor_list(
-    displacement_or_metric: DisplacementOrMetricFn,
-    box_size: float,
-    charge_fns: list[Callable[[Array], Array]],
-    embedding_fns: list[Callable[[Array], Array]],
-    pairwise_fns: list[Callable[[Array], Array]],
-    cutoff: float,
-    species=None,
-    dr_threshold: float = 0.5,
-    axis: Optional[Tuple[int, ...]] = None,
-    fractional_coordinates: bool = True,
-    format: partition.NeighborListFormat = partition.Dense,
-    **neighbor_kwargs,
+  displacement_or_metric: DisplacementOrMetricFn,
+  box_size: float,
+  charge_fns: list[Callable[[Array], Array]],
+  embedding_fns: list[Callable[[Array], Array]],
+  pairwise_fns: list[Callable[[Array], Array]],
+  cutoff: float,
+  species=None,
+  dr_threshold: float = 0.5,
+  axis: Optional[Tuple[int, ...]] = None,
+  fractional_coordinates: bool = True,
+  format: partition.NeighborListFormat = partition.Dense,
+  **neighbor_kwargs,
 ):
-    metric = space.canonicalize_displacement_or_metric(displacement_or_metric)
-    species_count = jnp.unique(species).shape[0]
+  metric = space.canonicalize_displacement_or_metric(displacement_or_metric)
+  species_count = jnp.unique(species).shape[0]
 
-    neighbor_fn = partition.neighbor_list(
-        displacement_or_metric,
-        box_size,
-        cutoff,
-        dr_threshold,
-        mask_self=False,
-        format=format,
-        **neighbor_kwargs,
+  neighbor_fn = partition.neighbor_list(
+    displacement_or_metric,
+    box_size,
+    cutoff,
+    dr_threshold,
+    mask_self=False,
+    format=format,
+    **neighbor_kwargs,
+  )
+
+  def energy_fn(R, neighbor, *, species, **kwargs):
+    # neighbor_mask = partition.neighbor_list_mask(neighbor)
+    neighbor_self_mask = partition.neighbor_list_mask(neighbor, mask_self=True)
+    d = partial(metric, **kwargs)
+    dr = space.map_neighbor(d)(R, R[neighbor.idx])
+
+    embedding_energy = jnp.zeros((R.shape[0],), dtype=f32)
+    pairwise_energy = jnp.zeros((R.shape[0],), dtype=f32)
+
+    if neighbor.format is partition.Dense:
+      dcharge = jnp.zeros((R.shape[0],))
+
+      for j in range(species_count):
+        Rj_mask = jnp.where(species[neighbor.idx] == j, True, False)
+
+        # jax.debug.print("j (embed) = {j}\n", j=j)
+
+        charge_arr = charge_fns[j](dr) * Rj_mask * neighbor_self_mask
+        dcharge += util.high_precision_sum(charge_arr, axis=1)
+        # jax.debug.print(
+        #     "dcharge: {dcharge}",
+        #     dcharge=util.high_precision_sum(
+        #         charge_fns[j](dr) * Rj_mask * neighbor_self_mask, axis=1
+        #     ),
+        # )
+
+      # Logic for mapping across species adapted from smap.pair
+      for i in range(species_count):
+        # jax.debug.print("\ni = {i}", i=i)
+        Ri_mask = jnp.where(species == i, True, False)
+        Ri_nb_mask = jnp.where(species[neighbor.idx] == i, True, False)
+
+        # Calculate embedding contribution
+        # jax.debug.print("dcharge before embed: {dcharge}", dcharge=dcharge)
+        embedding_energy += embedding_fns[i](dcharge) * Ri_mask
+        # jax.debug.print(
+        #     "embedding energy: {embedding_energy}",
+        #     embedding_energy=embedding_fns[i](dcharge) * Ri_mask,
+        # )
+        # total_embedding_energy = jnp.sum(embedding_energy)
+        # jax.debug.print(
+        #     "total embedding energy: {total_embedding_energy}\n",
+        #     total_embedding_energy=total_embedding_energy,
+        # )
+
+        # dcharge = jnp.zeros((R.shape[0],))
+
+        # Calculate pairwise interactions
+        for j in range(i + 1):
+          # We can't use arrays of dynamic size as below. Instead we can evaluate functions on the full d(R,R)
+          # arrays and then mask the results
+          # Ra = R[species == i]
+          # Rb = R[species == j]
+          # dr = space.map_product(d)(Ra, Rb)
+          Rj_mask = jnp.where(species == j, True, False)
+          Rj_nb_mask = jnp.where(species[neighbor.idx] == j, True, False)
+
+          # Mask to accept all A-B *and* all B-A pairs, since we only loop through j up to i+1
+          pairwise_mask = (
+            Ri_mask[:, None] * Rj_nb_mask + Rj_mask[:, None] * Ri_nb_mask
+          )
+
+          # jax.debug.print("i = {i}", i=i)
+          # jax.debug.print("j = {j}", j=j)
+
+          # charge_arr = charge_fns[j](dr) * Rj_nb_mask * neighbor_self_mask
+          # dcharge += util.high_precision_sum(charge_arr, axis=1)
+          # jax.debug.print(
+          #     "dcharge: {dcharge}",
+          #     dcharge=util.high_precision_sum(
+          #         charge_fns[j](dr) * Rj_nb_mask * neighbor_self_mask, axis=1
+          #     ),
+          # )
+
+          index_ij = int(i * (i + 1) / 2 + j)
+
+          pairwise_energy += (
+            util.high_precision_sum(
+              pairwise_fns[index_ij](dr) * pairwise_mask * neighbor_self_mask,
+              axis=1,
+            )
+            * 0.5
+          )
+          # total_pairwise_energy = jnp.sum(pairwise_energy)
+          # jax.debug.print(
+          #     "pairwise energy: {pairwise_energy}\n",
+          #     pairwise_energy=util.high_precision_sum(
+          #         pairwise_fns[index_ij](dr)
+          #         * pairwise_mask
+          #         * neighbor_self_mask,
+          #         axis=1,
+          #     )
+          #     * 0.5,
+          # )
+
+    else:
+      raise NotImplementedError(
+        'EAM alloy potential not implemented for '
+        'Sparse and OrderedSparse neighbor lists.'
+      )
+    # print(f"{embedding_energy + pairwise_energy = }")
+    # print(f"{(embedding_energy + pairwise_energy).shape = }")
+    # print(
+    #     f"{util.high_precision_sum(embedding_energy + pairwise_energy, axis=axis)}"
+    # )
+    return util.high_precision_sum(
+      embedding_energy + pairwise_energy, axis=axis
     )
 
-    def energy_fn(R, neighbor, *, species, **kwargs):
-        # neighbor_mask = partition.neighbor_list_mask(neighbor)
-        neighbor_self_mask = partition.neighbor_list_mask(neighbor, mask_self=True)
-        d = partial(metric, **kwargs)
-        dr = space.map_neighbor(d)(R, R[neighbor.idx])
-
-        embedding_energy = jnp.zeros((R.shape[0],), dtype=f32)
-        pairwise_energy = jnp.zeros((R.shape[0],), dtype=f32)
-
-        if neighbor.format is partition.Dense:
-            dcharge = jnp.zeros((R.shape[0],))
-
-            for j in range(species_count):
-                Rj_mask = jnp.where(species[neighbor.idx] == j, True, False)
-
-                # jax.debug.print("j (embed) = {j}\n", j=j)
-
-                charge_arr = charge_fns[j](dr) * Rj_mask * neighbor_self_mask
-                dcharge += util.high_precision_sum(charge_arr, axis=1)
-                # jax.debug.print(
-                #     "dcharge: {dcharge}",
-                #     dcharge=util.high_precision_sum(
-                #         charge_fns[j](dr) * Rj_mask * neighbor_self_mask, axis=1
-                #     ),
-                # )
-
-            # Logic for mapping across species adapted from smap.pair
-            for i in range(species_count):
-                # jax.debug.print("\ni = {i}", i=i)
-                Ri_mask = jnp.where(species == i, True, False)
-                Ri_nb_mask = jnp.where(species[neighbor.idx] == i, True, False)
-
-                # Calculate embedding contribution
-                # jax.debug.print("dcharge before embed: {dcharge}", dcharge=dcharge)
-                embedding_energy += embedding_fns[i](dcharge) * Ri_mask
-                # jax.debug.print(
-                #     "embedding energy: {embedding_energy}",
-                #     embedding_energy=embedding_fns[i](dcharge) * Ri_mask,
-                # )
-                # total_embedding_energy = jnp.sum(embedding_energy)
-                # jax.debug.print(
-                #     "total embedding energy: {total_embedding_energy}\n",
-                #     total_embedding_energy=total_embedding_energy,
-                # )
-
-                # dcharge = jnp.zeros((R.shape[0],))
-
-                # Calculate pairwise interactions
-                for j in range(i + 1):
-                    # We can't use arrays of dynamic size as below. Instead we can evaluate functions on the full d(R,R)
-                    # arrays and then mask the results
-                    # Ra = R[species == i]
-                    # Rb = R[species == j]
-                    # dr = space.map_product(d)(Ra, Rb)
-                    Rj_mask = jnp.where(species == j, True, False)
-                    Rj_nb_mask = jnp.where(species[neighbor.idx] == j, True, False)
-
-                    # Mask to accept all A-B *and* all B-A pairs, since we only loop through j up to i+1
-                    pairwise_mask = (
-                        Ri_mask[:, None] * Rj_nb_mask + Rj_mask[:, None] * Ri_nb_mask
-                    )
-
-                    # jax.debug.print("i = {i}", i=i)
-                    # jax.debug.print("j = {j}", j=j)
-
-                    # charge_arr = charge_fns[j](dr) * Rj_nb_mask * neighbor_self_mask
-                    # dcharge += util.high_precision_sum(charge_arr, axis=1)
-                    # jax.debug.print(
-                    #     "dcharge: {dcharge}",
-                    #     dcharge=util.high_precision_sum(
-                    #         charge_fns[j](dr) * Rj_nb_mask * neighbor_self_mask, axis=1
-                    #     ),
-                    # )
-
-                    index_ij = int(i * (i + 1) / 2 + j)
-
-                    pairwise_energy += (
-                        util.high_precision_sum(
-                            pairwise_fns[index_ij](dr)
-                            * pairwise_mask
-                            * neighbor_self_mask,
-                            axis=1,
-                        )
-                        * 0.5
-                    )
-                    # total_pairwise_energy = jnp.sum(pairwise_energy)
-                    # jax.debug.print(
-                    #     "pairwise energy: {pairwise_energy}\n",
-                    #     pairwise_energy=util.high_precision_sum(
-                    #         pairwise_fns[index_ij](dr)
-                    #         * pairwise_mask
-                    #         * neighbor_self_mask,
-                    #         axis=1,
-                    #     )
-                    #     * 0.5,
-                    # )
-
-        else:
-            raise NotImplementedError(
-                "EAM alloy potential not implemented for "
-                "Sparse and OrderedSparse neighbor lists."
-            )
-        # print(f"{embedding_energy + pairwise_energy = }")
-        # print(f"{(embedding_energy + pairwise_energy).shape = }")
-        # print(
-        #     f"{util.high_precision_sum(embedding_energy + pairwise_energy, axis=axis)}"
-        # )
-        return util.high_precision_sum(embedding_energy + pairwise_energy, axis=axis)
-
-    return neighbor_fn, energy_fn
+  return neighbor_fn, energy_fn
 
 
 def eam_from_lammps_parameters(
-    displacement: DisplacementFn, f: TextIO
+  displacement: DisplacementFn, f: TextIO
 ) -> Callable[[Array], Array]:
-    """Convenience wrapper to compute :ref:`EAM energy <eam-pot>` with LAMMPS parameters."""
-    return eam(displacement, *load_lammps_eam_parameters(f)[:-1])
+  """Convenience wrapper to compute :ref:`EAM energy <eam-pot>` with LAMMPS parameters."""
+  return eam(displacement, *load_lammps_eam_parameters(f)[:-1])
 
 
 def eam_neighbor_list(
@@ -2193,10 +2194,10 @@ def eam_neighbor_list(
     **neighbor_kwargs,
   )
 
-    def energy_fn(R, neighbor, **kwargs):
-        mask = partition.neighbor_list_mask(neighbor)
-        self_mask = partition.neighbor_list_mask(neighbor, mask_self=True)
-        d = partial(metric, **kwargs)
+  def energy_fn(R, neighbor, **kwargs):
+    mask = partition.neighbor_list_mask(neighbor)
+    self_mask = partition.neighbor_list_mask(neighbor, mask_self=True)
+    d = partial(metric, **kwargs)
 
     if neighbor.format is partition.Dense:
       dr = space.map_neighbor(d)(R, R[neighbor.idx])
@@ -2222,7 +2223,7 @@ def eam_neighbor_list(
       embedding_energy + pairwise_energy / 2.0, axis=axis
     )
 
-    return neighbor_fn, energy_fn
+  return neighbor_fn, energy_fn
 
 
 def eam_from_lammps_parameters_neighbor_list(
@@ -2299,8 +2300,8 @@ def behler_parrinello_neighbor_list(
     mlp_kwargs = {'activation': jnp.tanh}
 
     cutoff_distance = 8.0
-    if "cutoff_distance" in sym_kwargs:
-        cutoff_distance = sym_kwargs["cutoff_distance"]
+    if 'cutoff_distance' in sym_kwargs:
+      cutoff_distance = sym_kwargs['cutoff_distance']
 
   neighbor_fn = partition.neighbor_list(
     displacement,
@@ -2334,7 +2335,7 @@ def behler_parrinello_neighbor_list(
 
 
 class EnergyGraphNet(hk.Module):
-    """Implements a Graph Neural Network for energy fitting.
+  """Implements a Graph Neural Network for energy fitting.
 
   This model uses a GraphNetEmbedding combined with a decoder applied to the
   global state.
@@ -2367,27 +2368,27 @@ class EnergyGraphNet(hk.Module):
       **mlp_kwargs,
     )
 
-    def __call__(self, graph: nn.GraphsTuple) -> jnp.ndarray:
-        output = self._graph_net(graph)
-        output = jnp.squeeze(self._decoder(output.globals), axis=-1)
-        if self._format is partition.Sparse:
-            output = output[0]
-        return output
+  def __call__(self, graph: nn.GraphsTuple) -> jnp.ndarray:
+    output = self._graph_net(graph)
+    output = jnp.squeeze(self._decoder(output.globals), axis=-1)
+    if self._format is partition.Sparse:
+      output = output[0]
+    return output
 
 
 def _canonicalize_node_state(nodes: Optional[Array]) -> Optional[Array]:
-    if nodes is None:
-        return nodes
+  if nodes is None:
+    return nodes
 
-    if nodes.ndim == 1:
-        nodes = nodes[:, jnp.newaxis]
+  if nodes.ndim == 1:
+    nodes = nodes[:, jnp.newaxis]
 
   if nodes.ndim != 2:
     raise ValueError(
       'Nodes must be a [N, node_dim] array. Found {}.'.format(nodes.shape)
     )
 
-    return nodes
+  return nodes
 
 
 def graph_network(
@@ -2400,54 +2401,54 @@ def graph_network(
 ) -> Tuple[nn.InitFn, Callable[[PyTree, Array], Array]]:
   """Convenience wrapper around EnergyGraphNet model.
 
-    Args:
-      displacement_fn: Function to compute displacement between two positions.
-      r_cutoff: A floating point cutoff; Edges will be added to the graph
-        for pairs of particles whose separation is smaller than the cutoff.
-      nodes: None or an ndarray of shape `[N, node_dim]` specifying the state
-        of the nodes. If None this is set to the zeros vector. Often, for a
-        system with multiple species, this could be the species id.
-      n_recurrences: The number of steps of message passing in the graph network.
-      mlp_sizes: A tuple specifying the layer-widths for the fully-connected
-        networks used to update the states in the graph network.
-      mlp_kwargs: A dict specifying args for the fully-connected networks used to
-        update the states in the graph network.
+  Args:
+    displacement_fn: Function to compute displacement between two positions.
+    r_cutoff: A floating point cutoff; Edges will be added to the graph
+      for pairs of particles whose separation is smaller than the cutoff.
+    nodes: None or an ndarray of shape `[N, node_dim]` specifying the state
+      of the nodes. If None this is set to the zeros vector. Often, for a
+      system with multiple species, this could be the species id.
+    n_recurrences: The number of steps of message passing in the graph network.
+    mlp_sizes: A tuple specifying the layer-widths for the fully-connected
+      networks used to update the states in the graph network.
+    mlp_kwargs: A dict specifying args for the fully-connected networks used to
+      update the states in the graph network.
 
-    Returns:
-      A tuple of functions. An `params = init_fn(key, R)` that instantiates the
-      model parameters and an `E = apply_fn(params, R)` that computes the energy
-      for a particular state.
-    """
+  Returns:
+    A tuple of functions. An `params = init_fn(key, R)` that instantiates the
+    model parameters and an `E = apply_fn(params, R)` that computes the energy
+    for a particular state.
+  """
 
-    nodes = _canonicalize_node_state(nodes)
+  nodes = _canonicalize_node_state(nodes)
 
-    @hk.without_apply_rng
-    @hk.transform
-    def model(R: Array, **kwargs) -> Array:
-        N = R.shape[0]
+  @hk.without_apply_rng
+  @hk.transform
+  def model(R: Array, **kwargs) -> Array:
+    N = R.shape[0]
 
-        d = partial(displacement_fn, **kwargs)
-        d = space.map_product(d)
-        dR = d(R, R)
+    d = partial(displacement_fn, **kwargs)
+    d = space.map_product(d)
+    dR = d(R, R)
 
-        dr_2 = space.square_distance(dR)
+    dr_2 = space.square_distance(dR)
 
-        if "nodes" in kwargs:
-            _nodes = _canonicalize_node_state(kwargs["nodes"])
-        else:
-            _nodes = jnp.zeros((N, 1), R.dtype) if nodes is None else nodes
+    if 'nodes' in kwargs:
+      _nodes = _canonicalize_node_state(kwargs['nodes'])
+    else:
+      _nodes = jnp.zeros((N, 1), R.dtype) if nodes is None else nodes
 
     edge_idx = jnp.broadcast_to(jnp.arange(N)[jnp.newaxis, :], (N, N))
     edge_idx = jnp.where(dr_2 < r_cutoff**2, edge_idx, N)
 
-        _globals = jnp.zeros((1,), R.dtype)
+    _globals = jnp.zeros((1,), R.dtype)
 
     net = EnergyGraphNet(n_recurrences, mlp_sizes, mlp_kwargs)
     return net(
       nn.GraphsTuple(_nodes, dR, _globals, edge_idx)
     )  # pytype: disable=wrong-arg-count
 
-    return model.init, model.apply
+  return model.init, model.apply
 
 
 def graph_network_neighbor_list(
@@ -2467,54 +2468,54 @@ def graph_network_neighbor_list(
 ]:
   """Convenience wrapper around EnergyGraphNet model using neighbor lists.
 
-    Args:
-      displacement_fn: Function to compute displacement between two positions.
-      box_size: The size of the simulation volume, used to construct neighbor
-        list.
-      r_cutoff: A floating point cutoff; Edges will be added to the graph
-        for pairs of particles whose separation is smaller than the cutoff.
-      dr_threshold: A floating point number specifying a "halo" radius that we use
-        for neighbor list construction. See `neighbor_list` for details.
-      nodes: None or an ndarray of shape `[N, node_dim]` specifying the state
-        of the nodes. If None this is set to the zeroes vector. Often, for a
-        system with multiple species, this could be the species id.
-      n_recurrences: The number of steps of message passing in the graph network.
-      mlp_sizes: A tuple specifying the layer-widths for the fully-connected
-        networks used to update the states in the graph network.
-      mlp_kwargs: A dict specifying args for the fully-connected networks used to
-        update the states in the graph network.
-      fractional_coordinates: A boolean specifying whether or not the coordinates
-        will be in the unit cube.
-      format: The format of the neighbor list. See `partition.NeighborListFormat`
-        for details. Only `Dense` and `Sparse` formats are accepted. If the `Dense`
-        format is used, then the graph network is constructed using the JAX MD
-        backend, otherwise Jraph is used.
+  Args:
+    displacement_fn: Function to compute displacement between two positions.
+    box_size: The size of the simulation volume, used to construct neighbor
+      list.
+    r_cutoff: A floating point cutoff; Edges will be added to the graph
+      for pairs of particles whose separation is smaller than the cutoff.
+    dr_threshold: A floating point number specifying a "halo" radius that we use
+      for neighbor list construction. See `neighbor_list` for details.
+    nodes: None or an ndarray of shape `[N, node_dim]` specifying the state
+      of the nodes. If None this is set to the zeroes vector. Often, for a
+      system with multiple species, this could be the species id.
+    n_recurrences: The number of steps of message passing in the graph network.
+    mlp_sizes: A tuple specifying the layer-widths for the fully-connected
+      networks used to update the states in the graph network.
+    mlp_kwargs: A dict specifying args for the fully-connected networks used to
+      update the states in the graph network.
+    fractional_coordinates: A boolean specifying whether or not the coordinates
+      will be in the unit cube.
+    format: The format of the neighbor list. See `partition.NeighborListFormat`
+      for details. Only `Dense` and `Sparse` formats are accepted. If the `Dense`
+      format is used, then the graph network is constructed using the JAX MD
+      backend, otherwise Jraph is used.
 
-    Returns:
-      A pair of functions. An `params = init_fn(key, R)` that instantiates the
-      model parameters and an `E = apply_fn(params, R)` that computes the energy
-      for a particular state.
-    """
+  Returns:
+    A pair of functions. An `params = init_fn(key, R)` that instantiates the
+    model parameters and an `E = apply_fn(params, R)` that computes the energy
+    for a particular state.
+  """
 
-    nodes = _canonicalize_node_state(nodes)
+  nodes = _canonicalize_node_state(nodes)
 
-    @hk.without_apply_rng
-    @hk.transform
-    def model(R, neighbor, **kwargs):
-        N = R.shape[0]
-        d = partial(displacement_fn, **kwargs)
+  @hk.without_apply_rng
+  @hk.transform
+  def model(R, neighbor, **kwargs):
+    N = R.shape[0]
+    d = partial(displacement_fn, **kwargs)
 
-        if "nodes" in kwargs:
-            _nodes = _canonicalize_node_state(kwargs["nodes"])
-        else:
-            _nodes = jnp.zeros((N, 1), R.dtype) if nodes is None else nodes
+    if 'nodes' in kwargs:
+      _nodes = _canonicalize_node_state(kwargs['nodes'])
+    else:
+      _nodes = jnp.zeros((N, 1), R.dtype) if nodes is None else nodes
 
-        _globals = jnp.zeros((1,), R.dtype)
+    _globals = jnp.zeros((1,), R.dtype)
 
-        if format is partition.Dense:
-            d = space.map_neighbor(d)
-            R_neigh = R[neighbor.idx]
-            dR = d(R, R_neigh)
+    if format is partition.Dense:
+      d = space.map_neighbor(d)
+      R_neigh = R[neighbor.idx]
+      dR = d(R, R_neigh)
 
       dr_2 = space.square_distance(dR)
       edge_idx = jnp.where(dr_2 < r_cutoff**2, neighbor.idx, N)
@@ -2522,26 +2523,26 @@ def graph_network_neighbor_list(
     else:
       d = space.map_bond(d)
       dR = d(R[neighbor.idx[0]], R[neighbor.idx[1]])
-      if dr_threshold > 0.0:
-        dr_2 = space.square_distance(dR)
-        mask = dr_2 < r_cutoff**2 + 1e-5
-        graph = partition.to_jraph(neighbor, mask)
-        # TODO(schsam): It seems wasteful to recompute dR after we remask the
-        # edges. If I can think of a clean way to get rid of this, I should.
-        dR = d(R[graph.receivers], R[graph.senders])
-      else:
-        graph = partition.to_jraph(neighbor)
+    if dr_threshold > 0.0:
+      dr_2 = space.square_distance(dR)
+      mask = dr_2 < r_cutoff**2 + 1e-5
+      graph = partition.to_jraph(neighbor, mask)
+      # TODO(schsam): It seems wasteful to recompute dR after we remask the
+      # edges. If I can think of a clean way to get rid of this, I should.
+      dR = d(R[graph.receivers], R[graph.senders])
+    else:
+      graph = partition.to_jraph(neighbor)
 
-      graph = graph._replace(
-        nodes=jnp.concatenate(
-          (_nodes, jnp.zeros((1,) + _nodes.shape[1:], R.dtype)), axis=0
-        ),
-        edges=dR,
-        globals=jnp.broadcast_to(_globals[:, None], (2, 1)),
-      )
+    graph = graph._replace(
+      nodes=jnp.concatenate(
+        (_nodes, jnp.zeros((1,) + _nodes.shape[1:], R.dtype)), axis=0
+      ),
+      edges=dR,
+      globals=jnp.broadcast_to(_globals[:, None], (2, 1)),
+    )
 
-        net = EnergyGraphNet(n_recurrences, mlp_sizes, mlp_kwargs, format)
-        return net(graph)  # pytype: disable=wrong-arg-count
+    net = EnergyGraphNet(n_recurrences, mlp_sizes, mlp_kwargs, format)
+    return net(graph)  # pytype: disable=wrong-arg-count
 
   neighbor_fn = partition.neighbor_list(
     displacement_fn,
@@ -2555,7 +2556,7 @@ def graph_network_neighbor_list(
   )
   init_fn, apply_fn = model.init, model.apply
 
-    return neighbor_fn, init_fn, apply_fn
+  return neighbor_fn, init_fn, apply_fn
 
 
 def nequip_neighbor_list(
@@ -2568,25 +2569,25 @@ def nequip_neighbor_list(
     displacement_fn, box, cfg.r_max, format=partition.Sparse, **nl_kwargs
   )
 
-    featurizer = nn.util.neighbor_list_featurizer(displacement_fn)
+  featurizer = nn.util.neighbor_list_featurizer(displacement_fn)
 
-    def init_fn(key, position, neighbor, **kwargs):
-        _atoms = kwargs.pop("atoms", atoms)
-        if _atoms is None:
-            raise ValueError("A one-hot encoding of the atoms is required.")
-        # TODO: It would be nicer to do this without computing flops
-        # since we really only need the shape of the graph for initialization.
-        graph = featurizer(_atoms, position, neighbor, **kwargs)
-        return model.init(key, graph)
+  def init_fn(key, position, neighbor, **kwargs):
+    _atoms = kwargs.pop('atoms', atoms)
+    if _atoms is None:
+      raise ValueError('A one-hot encoding of the atoms is required.')
+    # TODO: It would be nicer to do this without computing flops
+    # since we really only need the shape of the graph for initialization.
+    graph = featurizer(_atoms, position, neighbor, **kwargs)
+    return model.init(key, graph)
 
-    def energy_fn(params, position, neighbor, **kwargs):
-        _atoms = kwargs.pop("atoms", atoms)
-        if _atoms is None:
-            raise ValueError("A one-hot encoding of the atoms is required.")
-        graph = featurizer(_atoms, position, neighbor, **kwargs)
-        return model.apply(params, graph)[0, 0]
+  def energy_fn(params, position, neighbor, **kwargs):
+    _atoms = kwargs.pop('atoms', atoms)
+    if _atoms is None:
+      raise ValueError('A one-hot encoding of the atoms is required.')
+    graph = featurizer(_atoms, position, neighbor, **kwargs)
+    return model.apply(params, graph)[0, 0]
 
-    return neighbor_fn, init_fn, energy_fn
+  return neighbor_fn, init_fn, energy_fn
 
 
 def load_gnome_model_neighbor_list(
@@ -2599,13 +2600,13 @@ def load_gnome_model_neighbor_list(
     displacement_fn, box, cfg.r_max, format=partition.Sparse, **nl_kwargs
   )
 
-    featurizer = nn.util.neighbor_list_featurizer(displacement_fn)
+  featurizer = nn.util.neighbor_list_featurizer(displacement_fn)
 
-    def energy_fn(position, neighbor, **kwargs):
-        _atoms = kwargs.pop("atoms", atoms)
-        if _atoms is None:
-            raise ValueError("A one-hot encoding of the atoms is required.")
-        graph = featurizer(_atoms, position, neighbor, **kwargs)
-        return model.apply(params, graph)[0, 0]
+  def energy_fn(position, neighbor, **kwargs):
+    _atoms = kwargs.pop('atoms', atoms)
+    if _atoms is None:
+      raise ValueError('A one-hot encoding of the atoms is required.')
+    graph = featurizer(_atoms, position, neighbor, **kwargs)
+    return model.apply(params, graph)[0, 0]
 
   return neighbor_fn, energy_fn
