@@ -216,7 +216,7 @@ def lennard_jones(
 ) -> Array:
   """.. _lj-pot:
 
-    Lennard-Jones interaction between particles with a minimum at `sigma`.
+  Lennard-Jones interaction between particles with a minimum at `sigma`.
 
   Args:
     dr: An ndarray of shape `[n, m]` of pairwise distances between particles.
@@ -314,7 +314,7 @@ def morse(
 ) -> Array:
   """.. _morse-pot:
 
-    Morse interaction between particles with a minimum at `sigma`.
+  Morse interaction between particles with a minimum at `sigma`.
 
   Args:
     dr: An ndarray of shape `[n, m]` of pairwise distances between particles.
@@ -440,7 +440,7 @@ def gupta_potential(displacement, p, q, r_0n, U_n, A, cutoff):
   .. rubric:: References
   .. [#gupta] R.P. Gupta, Phys. Rev. B 23, 6265 (1981)
   .. [#jellinek] J. Jellinek, in Metal-Ligand Interactions, edited by N. Russo
-    and D. R. Salahub (Kluwer Academic, Dordrecht, 1996), p. 325.
+     and D. R. Salahub (Kluwer Academic, Dordrecht, 1996), p. 325.
   .. [#garzon] I.L. Garzon, A. Posada-Amarillas, Phys. Rev. B 54, 16 (1996)
   """
 
@@ -568,27 +568,27 @@ def bks(
 ) -> Array:
   """.. _bks-pot:
 
-    Beest-Kramer-van Santen (BKS) potential [#bks]_ which is commonly used to
-    model silicas. This function computes the interaction between two
-    given atoms within the Buckingham form [#carre]_ , following the
-    implementation from Liu et al. [#liu]_ .
+  Beest-Kramer-van Santen (BKS) potential [#bks]_ which is commonly used to
+  model silicas. This function computes the interaction between two
+  given atoms within the Buckingham form [#carre]_ , following the
+  implementation from Liu et al. [#liu]_ .
 
-    Args:
-      dr: An ndarray of shape `[n, m]` of pairwise distances between particles.
-      Q_sq: An ndarray of shape `[n, m]` of pairwise product of partial charges.
-      exp_coeff: An ndarray of shape `[n, m]` that sets the scale of the
-        exponential decay of the short-range interaction.
-      attractive_coeff: An ndarray of shape `[n, m]` for the coefficient of the
-        attractive 6th order term.
-      repulsive_coeff: An ndarray of shape `[n, m]` for the coefficient of the
-        repulsive 24th order term, to prevent the unphysical fusion of atoms.
-      coulomb_alpha: Damping parameter for the approximation of the long-range
-        coulombic interactions (a scalar).
-      cutoff: Cutoff distance for considering pairwise interactions.
-      unused_kwargs: Allows extra data (e.g. time) to be passed to the energy.
+  Args:
+    dr: An ndarray of shape `[n, m]` of pairwise distances between particles.
+    Q_sq: An ndarray of shape `[n, m]` of pairwise product of partial charges.
+    exp_coeff: An ndarray of shape `[n, m]` that sets the scale of the
+      exponential decay of the short-range interaction.
+    attractive_coeff: An ndarray of shape `[n, m]` for the coefficient of the
+      attractive 6th order term.
+    repulsive_coeff: An ndarray of shape `[n, m]` for the coefficient of the
+      repulsive 24th order term, to prevent the unphysical fusion of atoms.
+    coulomb_alpha: Damping parameter for the approximation of the long-range
+      coulombic interactions (a scalar).
+    cutoff: Cutoff distance for considering pairwise interactions.
+    unused_kwargs: Allows extra data (e.g. time) to be passed to the energy.
 
-    Returns:
-      Matrix of energies of shape `[n, m]`.
+  Returns:
+    Matrix of energies of shape `[n, m]`.
 
   .. rubric:: References
   .. [#bks] Van Beest, B. W. H., Gert Jan Kramer, and R. A. Van Santen. "Force fields
@@ -1006,35 +1006,35 @@ def load_lammps_tersoff_parameters(file: TextIO) -> Array:
     words = line_keep.strip().split()
     nwords = len(words)
 
-  if nwords != params_per_line:
-    raise ValueError(
-      'Incorrect format: %d not in %d' % (nwords, params_per_line)
-    )
-  else:
-    skip = False
+    if nwords != params_per_line:
+      raise ValueError(
+        'Incorrect format: %d not in %d' % (nwords, params_per_line)
+      )
+    else:
+      skip = False
 
-  words[3:] = f64(words[3:])
-  params.append(
-    {
-      'element1': words[0],
-      'element2': words[1],
-      'element3': words[2],
-      'mTf': words[3],
-      'gamma': words[4],
-      'lam3': words[5],
-      'cTf': words[6],
-      'dTf': words[7],
-      'hTf': words[8],
-      'nTf': words[9],
-      'beta': words[10],
-      'lam2': words[11],
-      'B': words[12],
-      'R': words[13],
-      'D': words[14],
-      'lam1': words[15],
-      'A': words[16],
-    }
-  )
+    words[3:] = f64(words[3:])
+    params.append(
+      {
+        'element1': words[0],
+        'element2': words[1],
+        'element3': words[2],
+        'mTf': words[3],
+        'gamma': words[4],
+        'lam3': words[5],
+        'cTf': words[6],
+        'dTf': words[7],
+        'hTf': words[8],
+        'nTf': words[9],
+        'beta': words[10],
+        'lam2': words[11],
+        'B': words[12],
+        'R': words[13],
+        'D': words[14],
+        'lam1': words[15],
+        'A': words[16],
+      }
+    )
   return params
 
 
@@ -1043,7 +1043,7 @@ def _ters_cutoff(dr, R, D) -> Array:
   Args:
     R: A Parameter that is the average of inner and outer cutoff radii
     D: A Parameter that is the half of the difference
-        between inner and outer cutoff radii
+       between inner and outer cutoff radii
 
   Returns:
     cut-off values
@@ -1080,7 +1080,7 @@ def _ters_bij(R, D, c, d, h, lam3, beta, n, m, dRij, dRik, mask_ijk) -> Array:
     n: A Parameter that determines bond-order value
 
     dRij: A ndarray of shape [n, neighbors, dim] of pairwise distances between
-      particles
+     particles
     dRik: A ndarray of shape [n, neighbors, dim] of pairwise distances between
       particles TODO - Currently, it is the same as the dRij
 
@@ -1189,21 +1189,21 @@ def tersoff(
 ) -> Callable[[Array], Array]:
   """Computes the Tersoff potential.
 
-    The Tersoff potential [1] which is commonly used to model
-    semiconducting materials. The Tersoff potential was originally proposed to
-    model various types of lattice with a simple functional form.
-    For this reason, Tersoff model was introduced bond-order function
-    to determine the strength of repulsive and attractive forces between atoms.
+  The Tersoff potential [1] which is commonly used to model
+  semiconducting materials. The Tersoff potential was originally proposed to
+  model various types of lattice with a simple functional form.
+  For this reason, Tersoff model was introduced bond-order function
+  to determine the strength of repulsive and attractive forces between atoms.
 
-    Args:
-      displacement: The displacement function for the space.
-      params: A dictionary of parameters for the tersoff potential. Usually this
-        should be loaded from lammps using the
-        :ref:`load_lammps_tersoff_parameters <ts-lammps>` function.
-      species: An array of species. Currently only `None` is supported.
+  Args:
+    displacement: The displacement function for the space.
+    params: A dictionary of parameters for the tersoff potential. Usually this
+      should be loaded from lammps using the
+      :ref:`load_lammps_tersoff_parameters <ts-lammps>` function.
+    species: An array of species. Currently only `None` is supported.
 
-    Returns:
-      A function that computes the total energy.
+  Returns:
+    A function that computes the total energy.
 
   [1] J. Tersoff "New empirical approach for the structure and energy of
   covalent systems" Physical review B 37.12 (1988): 6991.
@@ -1658,18 +1658,18 @@ def load_lammps_eam_parameters(
   Returns:
     A tuple containing three functions and a cutoff distance.
 
-  charge_fn:
-    A function that takes an ndarray of shape `[n, m]` of distances
-    between particles and returns a matrix of charge contributions.
-  embedding_fn:
-    Function that takes an ndarray of shape `[n]` of charges and
-    returns an ndarray of shape `[n]` of the energy cost of embedding an atom
-    into the charge.
-  pairwise_fn:
-    A function that takes an ndarray of shape `[n, m]` of distances
-    and returns an ndarray of shape `[n, m]` of pairwise energies.
-  cutoff:
-    Cutoff distance for the `embedding_fn` and `pairwise_fn`.
+    charge_fn:
+      A function that takes an ndarray of shape `[n, m]` of distances
+      between particles and returns a matrix of charge contributions.
+    embedding_fn:
+      Function that takes an ndarray of shape `[n]` of charges and
+      returns an ndarray of shape `[n]` of the energy cost of embedding an atom
+      into the charge.
+    pairwise_fn:
+      A function that takes an ndarray of shape `[n, m]` of distances
+      and returns an ndarray of shape `[n, m]` of pairwise energies.
+    cutoff:
+      Cutoff distance for the `embedding_fn` and `pairwise_fn`.
   """
   raw_text = file.read().split('\n')
   if 'setfl' not in raw_text[0]:
@@ -2259,7 +2259,7 @@ def behler_parrinello(
   if mlp_kwargs is None:
     mlp_kwargs = {'activation': jnp.tanh}
 
-    sym_fn = bp.symmetry_functions(displacement, species, **sym_kwargs)
+  sym_fn = bp.symmetry_functions(displacement, species, **sym_kwargs)
 
   @hk.without_apply_rng
   @hk.transform
@@ -2299,9 +2299,9 @@ def behler_parrinello_neighbor_list(
   if mlp_kwargs is None:
     mlp_kwargs = {'activation': jnp.tanh}
 
-    cutoff_distance = 8.0
-    if 'cutoff_distance' in sym_kwargs:
-      cutoff_distance = sym_kwargs['cutoff_distance']
+  cutoff_distance = 8.0
+  if 'cutoff_distance' in sym_kwargs:
+    cutoff_distance = sym_kwargs['cutoff_distance']
 
   neighbor_fn = partition.neighbor_list(
     displacement,
@@ -2523,23 +2523,23 @@ def graph_network_neighbor_list(
     else:
       d = space.map_bond(d)
       dR = d(R[neighbor.idx[0]], R[neighbor.idx[1]])
-    if dr_threshold > 0.0:
-      dr_2 = space.square_distance(dR)
-      mask = dr_2 < r_cutoff**2 + 1e-5
-      graph = partition.to_jraph(neighbor, mask)
-      # TODO(schsam): It seems wasteful to recompute dR after we remask the
-      # edges. If I can think of a clean way to get rid of this, I should.
-      dR = d(R[graph.receivers], R[graph.senders])
-    else:
-      graph = partition.to_jraph(neighbor)
+      if dr_threshold > 0.0:
+        dr_2 = space.square_distance(dR)
+        mask = dr_2 < r_cutoff**2 + 1e-5
+        graph = partition.to_jraph(neighbor, mask)
+        # TODO(schsam): It seems wasteful to recompute dR after we remask the
+        # edges. If I can think of a clean way to get rid of this, I should.
+        dR = d(R[graph.receivers], R[graph.senders])
+      else:
+        graph = partition.to_jraph(neighbor)
 
-    graph = graph._replace(
-      nodes=jnp.concatenate(
-        (_nodes, jnp.zeros((1,) + _nodes.shape[1:], R.dtype)), axis=0
-      ),
-      edges=dR,
-      globals=jnp.broadcast_to(_globals[:, None], (2, 1)),
-    )
+      graph = graph._replace(
+        nodes=jnp.concatenate(
+          (_nodes, jnp.zeros((1,) + _nodes.shape[1:], R.dtype)), axis=0
+        ),
+        edges=dR,
+        globals=jnp.broadcast_to(_globals[:, None], (2, 1)),
+      )
 
     net = EnergyGraphNet(n_recurrences, mlp_sizes, mlp_kwargs, format)
     return net(graph)  # pytype: disable=wrong-arg-count
