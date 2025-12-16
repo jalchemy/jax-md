@@ -47,7 +47,7 @@ Box = space.Box
 EnergyFn = Callable[..., Array]
 ForceFn = Callable[..., Array]
 
-T = TypeVar('T')
+T = TypeVar("T")
 InitFn = Callable[..., T]
 ApplyFn = Callable[[T], T]
 Simulator = Tuple[InitFn, ApplyFn]
@@ -64,6 +64,7 @@ def force(energy_fn: EnergyFn) -> ForceFn:
 def clipped_force(energy_fn: EnergyFn, max_force: float) -> ForceFn:
   force_fn = force(energy_fn)
 
+
   def wrapped_force_fn(R, *args, **kwargs):
     force = force_fn(R, *args, **kwargs)
     force_norm = jnp.linalg.norm(force, axis=-1, keepdims=True)
@@ -77,6 +78,7 @@ def clipped_force(energy_fn: EnergyFn, max_force: float) -> ForceFn:
 def canonicalize_force(energy_or_force_fn: Union[EnergyFn, ForceFn]) -> ForceFn:
   _force_fn = None
 
+
   def force_fn(R, **kwargs):
     nonlocal _force_fn
     if _force_fn is None:
@@ -88,6 +90,7 @@ def canonicalize_force(energy_or_force_fn: Union[EnergyFn, ForceFn]) -> ForceFn:
         is_valid_force = tree_reduce(
           lambda x, y: x and y,
           tree_map(lambda x, y: x.shape == y.shape, out_shaped, R),
+          True,
           True,
         )
         if not is_valid_force:
@@ -112,6 +115,7 @@ def count_dof(position: Array) -> int:
 def volume(dimension: int, box: Box) -> Array:
   if jnp.isscalar(box) or not box.ndim:
     return box**dimension
+    return box**dimension
   elif box.ndim == 1:
     return jnp.prod(box)
   elif box.ndim == 2:
@@ -121,6 +125,12 @@ def volume(dimension: int, box: Box) -> Array:
   )
 
 
+def kinetic_energy(
+  *unused_args,
+  momentum: Array = None,
+  velocity: Array = None,
+  mass: Array = 1.0,
+) -> float:
 def kinetic_energy(
   *unused_args,
   momentum: Array = None,
@@ -159,6 +169,12 @@ def kinetic_energy(
   return tree_reduce(operator.add, ke, 0.0)
 
 
+def temperature(
+  *unused_args,
+  momentum: Array = None,
+  velocity: Array = None,
+  mass: Array = 1.0,
+) -> float:
 def temperature(
   *unused_args,
   momentum: Array = None,
@@ -206,6 +222,13 @@ def pressure(
   kinetic_energy: float = 0.0,
   **kwargs,
 ) -> float:
+def pressure(
+  energy_fn: EnergyFn,
+  position: Array,
+  box: Box,
+  kinetic_energy: float = 0.0,
+  **kwargs,
+) -> float:
   """Computes the internal pressure of a system.
 
   Args:
@@ -235,6 +258,14 @@ def pressure(
   return 1 / (dim * vol_0) * (2 * kinetic_energy - dUdV(0.0))
 
 
+def stress(
+  energy_fn: EnergyFn,
+  position: Array,
+  box: Box,
+  mass: Array = 1.0,
+  velocity: Optional[Array] = None,
+  **kwargs,
+) -> Array:
 def stress(
   energy_fn: EnergyFn,
   position: Array,
@@ -304,6 +335,8 @@ def cosine_angles(dR: Array) -> Array:
   angles_between_all_triplets = vmap(
     vmap(vmap(cosine_angle_between_two_vectors, (0, None)), (None, 0)), 0
   )
+    vmap(vmap(cosine_angle_between_two_vectors, (0, None)), (None, 0)), 0
+  )
   return angles_between_all_triplets(dR, dR)
 
 
@@ -312,6 +345,7 @@ def is_integer(x: Array) -> bool:
 
 
 def average_pair_correlation_results(gofr, species=None):
+  """Calculate species-based averages of pair correlations.
   """Calculate species-based averages of pair correlations.
 
   Average the results of pair_correlation or pair_correlation_neighbor_list,
@@ -339,13 +373,30 @@ def average_pair_correlation_results(gofr, species=None):
   """
   if species is None:
     return jnp.mean(gofr, axis=0)
-  species_types = jnp.unique(species)  # note: this returns in sorted order
+  ##### Hardcoding size=2 for now to make it work with vmap. NEED TO CHANGE IN THE FUTURE
+  species_types = jnp.unique(species, size=2)  # note: this returns in sorted order
+
+  # Updated below return statement to avoid dynamic bool array masks, using a 3-arg jnp.where instead so that the
+  # function is fully jit and vmap compatible
   return jnp.array(
     [
-      [jnp.mean(gofr[si][species == s], axis=0) for s in species_types]
+      [
+        jnp.sum(
+          jnp.where(
+            (species == s).repeat(gofr[si].shape[1]).reshape((gofr[si].shape)),
+            gofr[si],
+            0,
+          ),
+          axis=0,
+        )
+        / jnp.count_nonzero(species == s)
+        for s in species_types
+      ]
       for si in range(species_types.size)
     ]
   )
+  # return jnp.array([ [ jnp.mean(gofr[si][species==s], axis=0) \
+  #     for s in species_types] for si in range(species_types.size)])
 
 
 def pair_correlation(
@@ -410,17 +461,20 @@ def pair_correlation(
 
   if species is None:
 
+
     def g_fn(R):
       dim = R.shape[-1]
       mask = 1 - jnp.eye(R.shape[0], dtype=R.dtype)
+      g_R = jnp.sum(mask[:, :, jnp.newaxis] * pairwise(d(R, R), dim), axis=(1,))
       g_R = jnp.sum(mask[:, :, jnp.newaxis] * pairwise(d(R, R), dim), axis=(1,))
       if compute_average:
         g_R = average_pair_correlation_results(g_R, species)
       return g_R
   else:
     if not (isinstance(species, jnp.ndarray) and is_integer(species)):
-      raise TypeError('Malformed species; expecting array of integers.')
+      raise TypeError("Malformed species; expecting array of integers.")
     species_types = jnp.unique(species)
+
 
     def g_fn(R):
       dim = R.shape[-1]
@@ -433,6 +487,7 @@ def pair_correlation(
       if compute_average:
         g_R = average_pair_correlation_results(g_R, species)
       return g_R
+
 
   return g_fn
 
@@ -500,6 +555,7 @@ def pair_correlation_neighbor_list(
   metric = space.canonicalize_displacement_or_metric(displacement_or_metric)
   inv_rad = 1 / (radii + eps)
 
+
   def pairwise(dr, dim):
     return jnp.exp(-f32(0.5) * (dr - radii) ** 2 / sigma**2) * inv_rad ** (
       dim - 1
@@ -512,8 +568,16 @@ def pair_correlation_neighbor_list(
     dr_threshold,
     format=format,
   )
+  neighbor_fn = partition.neighbor_list(
+    displacement_or_metric,
+    box_size,
+    jnp.max(radii) + sigma,
+    dr_threshold,
+    format=format,
+  )
 
   if species is None:
+
 
     def g_fn(R, neighbor):
       N, dim = R.shape
@@ -565,6 +629,12 @@ def pair_correlation_neighbor_list(
               axis=(1,),
             )
           ]
+          g_R += [
+            jnp.sum(
+              mask_s[:, :, jnp.newaxis] * _pairwise(d(R, R_neigh), dim),
+              axis=(1,),
+            )
+          ]
       elif neighbor.format is partition.Sparse:
         neighbor_species = species[neighbor.idx[1]]
         dr = space.map_bond(metric)(R[neighbor.idx[0]], R[neighbor.idx[1]])
@@ -586,7 +656,9 @@ def pair_correlation_neighbor_list(
         g_R = average_pair_correlation_results(g_R, species)
       return g_R
 
+
   return neighbor_fn, g_fn
+
 
 
 def nball_unit_volume(spatial_dimension: int) -> float:
@@ -595,7 +667,19 @@ def nball_unit_volume(spatial_dimension: int) -> float:
     gammaln(spatial_dimension / 2 + 1)
   )
 
+  """Return the volume of a unit sphere in arbitrary dimensions"""
+  return jnp.power(jnp.pi, spatial_dimension / 2) / jnp.exp(
+    gammaln(spatial_dimension / 2 + 1)
+  )
 
+
+def particle_volume(
+  radii: Array,
+  spatial_dimension: int,
+  particle_count: Array = 1,
+  species: Array = None,
+) -> float:
+  """Calculate the volume of a collection of particles
 def particle_volume(
   radii: Array,
   spatial_dimension: int,
@@ -633,6 +717,15 @@ def volume_fraction(
 ) -> float:
   """Calculate the volume fraction
 
+def volume_fraction(
+  box: Box,
+  radii: Array,
+  spatial_dimension: int,
+  particle_count: Array = 1,
+  species: Array = None,
+) -> float:
+  """Calculate the volume fraction
+
   See documentation for particle_volume for explanation of parameters
   """
   Vparticle = particle_volume(radii, spatial_dimension, particle_count, species)
@@ -648,18 +741,35 @@ def box_size_at_volume_fraction(
 ) -> float:
   """Calculate box_size to obtain a desired volume fraction
 
+def box_size_at_volume_fraction(
+  volume_fraction: float,
+  radii: Array,
+  spatial_dimension: int,
+  particle_count: Array = 1,
+  species: Array = None,
+) -> float:
+  """Calculate box_size to obtain a desired volume fraction
+
   See documentation for particle_volume for explanation of parameters
   """
   Vparticle = particle_volume(radii, spatial_dimension, particle_count, species)
+  return jnp.power(Vparticle / volume_fraction, 1 / spatial_dimension)
+
   return jnp.power(Vparticle / volume_fraction, 1 / spatial_dimension)
 
 
 def box_size_at_number_density(
   particle_count: int, number_density: float, spatial_dimension: int
 ) -> float:
+def box_size_at_number_density(
+  particle_count: int, number_density: float, spatial_dimension: int
+) -> float:
   return jnp.power(particle_count / number_density, 1 / spatial_dimension)
 
 
+def box_from_parameters(
+  a: float, b: float, c: float, alpha: float, beta: float, gamma: float
+) -> Box:
 def box_from_parameters(
   a: float, b: float, c: float, alpha: float, beta: float, gamma: float
 ) -> Box:
@@ -673,20 +783,26 @@ def box_from_parameters(
   zz = jnp.sqrt(c**2 - xz**2 - yz**2)
   return jnp.array([[a, xy, xz], [0, yy, yz], [0, 0, zz]])
 
+  return jnp.array([[a, xy, xz], [0, yy, yz], [0, 0, zz]])
+
 
 def bulk_modulus(elastic_tensor: Array) -> float:
-  return jnp.einsum('iijj->', elastic_tensor) / elastic_tensor.shape[0] ** 2
+  return jnp.einsum("iijj->", elastic_tensor) / elastic_tensor.shape[0] ** 2
 
 
 @dataclasses.dataclass
 class PHopState:
   position_buffer: jnp.ndarray
   phop: jnp.ndarray
+  position_buffer: jnp.ndarray
+  phop: jnp.ndarray
+
 
 
 InitFn = Callable[[Array], PHopState]
 ApplyFn = Callable[[PHopState, Array], PHopState]
 PHopCalculator = Tuple[InitFn, ApplyFn]
+
 
 
 def phop(displacement: DisplacementFn, window_size: int) -> PHopCalculator:
@@ -737,6 +853,9 @@ def phop(displacement: DisplacementFn, window_size: int) -> PHopCalculator:
     return PHopState(
       position_buffer, jnp.zeros((position.shape[0],))
     )  # pytype: disable=wrong-arg-count
+    return PHopState(
+      position_buffer, jnp.zeros((position.shape[0],))
+    )  # pytype: disable=wrong-arg-count
 
   def update_fn(state: PHopState, position: Array) -> PHopState:
     # Compute phop.
@@ -745,6 +864,9 @@ def phop(displacement: DisplacementFn, window_size: int) -> PHopCalculator:
     b_pos = state.position_buffer[half_window_size:]
     b_mean = jnp.mean(b_pos, axis=0)
 
+    phop = jnp.sqrt(
+      jnp.mean((a_pos - b_mean) ** 2 * (b_pos - a_mean) ** 2, axis=(0, 2))
+    )
     phop = jnp.sqrt(
       jnp.mean((a_pos - b_mean) ** 2 * (b_pos - a_mean) ** 2, axis=(0, 2))
     )
