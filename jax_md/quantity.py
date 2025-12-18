@@ -341,6 +341,8 @@ def average_pair_correlation_results(gofr, species=None, n_species=None):
     return jnp.mean(gofr, axis=0)
 
   if n_species is None:
+    # Note: this returns unique species in sorted order
+    species_types = jnp.unique(species)
     return jnp.array(
       [
         [jnp.mean(gofr[si][species == s], axis=0) for s in species_types]
@@ -379,7 +381,6 @@ def pair_correlation(
   species: Array = None,
   eps: float = 1e-7,
   compute_average: bool = False,
-  n_species: int = None,
 ):
   r"""Computes the pair correlation function at a mesh of distances.
 
@@ -457,7 +458,7 @@ def pair_correlation(
         g_R += [jnp.sum(mask_s * pairwise(d(Rs, R), dim), axis=(1,))]
       if compute_average:
         g_R = average_pair_correlation_results(
-          g_R, species, n_species=n_species
+          g_R, species, n_species=species_types
         )
       return g_R
 
@@ -475,7 +476,6 @@ def pair_correlation_neighbor_list(
   fractional_coordinates: bool = False,
   format: partition.NeighborListFormat = partition.Dense,
   compute_average: bool = False,
-  n_species: int = None,
 ):
   r"""Computes the pair correlation function at a mesh of distances.
 
@@ -612,7 +612,7 @@ def pair_correlation_neighbor_list(
 
       if compute_average:
         g_R = average_pair_correlation_results(
-          g_R, species, n_species=n_species
+          g_R, species, n_species=species_types
         )
       return g_R
 
