@@ -959,6 +959,111 @@ class EnergyTest(test_util.JAXMDTestCase):
 
   @parameterized.named_parameters(
     test_util.cases_from_list(
+      {'testcase_name': f'_dtype={dtype.__name__}', 'dtype': dtype}
+      for dtype in POSITION_DTYPE
+    )
+  )
+  def test_load_lammps_eam_parameters_alloy(self, dtype):
+    with open('tests/data/Ni_Al.eam.alloy', 'r') as fh:
+      charge_fns, embedding_fns, pairwise_fns, cutoff = (
+        energy.load_lammps_eam_parameters_alloy(fh)
+      )
+
+    self.assertLen(charge_fns, 2)
+    self.assertLen(embedding_fns, 2)
+    self.assertLen(pairwise_fns, 3)
+    self.assertIsInstance(cutoff, float)
+
+    for fn in charge_fns:
+      self.assertTrue(callable(fn))
+    for fn in embedding_fns:
+      self.assertTrue(callable(fn))
+    for fn in pairwise_fns:
+      self.assertTrue(callable(fn))
+
+  @parameterized.named_parameters(
+    test_util.cases_from_list(
+      {'testcase_name': f'_dtype={dtype.__name__}', 'dtype': dtype}
+      for dtype in POSITION_DTYPE
+    )
+  )
+  def test_eam_alloy(self, dtype):
+    displacement, _ = space.free()
+
+    with open('tests/data/Ni_Al.eam.alloy', 'r') as fh:
+      charge_fns, embedding_fns, pairwise_fns, cutoff = (
+        energy.load_lammps_eam_parameters_alloy(fh)
+      )
+
+    R = jnp.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=dtype)
+    species = jnp.array([0, 1])
+
+    eam_energy_fn = energy.eam_alloy(
+      displacement,
+      charge_fns,
+      embedding_fns,
+      pairwise_fns,
+      cutoff,
+      species=species,
+    )
+    E = eam_energy_fn(R, species=species)
+    # TODO(PE-3033): Add a test with a known value.
+    self.assertFalse(jnp.isnan(E))
+
+  @parameterized.named_parameters(
+    test_util.cases_from_list(
+      {
+        'testcase_name': f'_dtype={dtype.__name__}_format={str(format).split(".")[-1]}',
+        'dtype': dtype,
+        'format': format,
+      }
+      for dtype in POSITION_DTYPE
+      for format in NEIGHBOR_LIST_FORMAT
+    )
+  )
+  def test_eam_alloy_neighbor_list(self, dtype, format):
+    if format is partition.OrderedSparse or format is partition.Sparse:
+      self.skipTest(
+        'OrderedSparse and Sparse neighbor lists not supported for EAM alloy potential.'
+      )
+    box_size = f32(5.0)
+    displacement, _ = space.periodic(box_size)
+
+    with open('tests/data/Ni_Al.eam.alloy', 'r') as fh:
+      charge_fns, embedding_fns, pairwise_fns, cutoff = (
+        energy.load_lammps_eam_parameters_alloy(fh)
+      )
+
+    R = jnp.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=dtype)
+    species = jnp.array([0, 1])
+
+    neighbor_fn, eam_energy_nl_fn = energy.eam_alloy_neighbor_list(
+      displacement,
+      box_size,
+      charge_fns,
+      embedding_fns,
+      pairwise_fns,
+      cutoff,
+      species=species,
+      format=format,
+    )
+    eam_energy_fn = energy.eam_alloy(
+      displacement,
+      charge_fns,
+      embedding_fns,
+      pairwise_fns,
+      cutoff,
+      species=species,
+    )
+
+    nbrs = neighbor_fn.allocate(R)
+    E_nl = eam_energy_nl_fn(R, nbrs, species=species)
+    E = eam_energy_fn(R, species=species)
+
+    self.assertAllClose(E, E_nl)
+
+  @parameterized.named_parameters(
+    test_util.cases_from_list(
       {'testcase_name': '_dtype={}'.format(dtype.__name__), 'dtype': dtype}
       for dtype in POSITION_DTYPE
     )

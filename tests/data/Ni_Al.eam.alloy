@@ -1,0 +1,38 @@
+# Alloy potential
+# Created for testing
+#
+2 Ni Al
+3 1.0 4 1.0 4.0
+# Embedding Ni
+1.0
+2.0
+3.0
+# Charge Ni
+4.0
+3.0
+2.0
+1.0
+# Embedding Al
+0.5
+1.0
+1.5
+# Charge Al
+2.0
+1.5
+1.0
+0.5
+# Pairwise Ni-Ni
+1.0
+1.0
+1.0
+1.0
+# Pairwise Al-Ni
+0.5
+0.5
+0.5
+0.5
+# Pairwise Al-Al
+2.0
+2.0
+2.0
+2.0
