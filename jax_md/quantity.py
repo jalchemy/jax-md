@@ -311,7 +311,7 @@ def is_integer(x: Array) -> bool:
   return x.dtype == jnp.int32 or x.dtype == jnp.int64
 
 
-def average_pair_correlation_results(gofr, species=None):
+def average_pair_correlation_results(gofr, species=None, n_species=None):
   """Calculate species-based averages of pair correlations.
 
   Average the results of pair_correlation or pair_correlation_neighbor_list,
@@ -339,10 +339,36 @@ def average_pair_correlation_results(gofr, species=None):
   """
   if species is None:
     return jnp.mean(gofr, axis=0)
-  species_types = jnp.unique(species)  # note: this returns in sorted order
+
+  if n_species is None:
+    # Note: this returns unique species in sorted order
+    species_types = jnp.unique(species)
+    return jnp.array(
+      [
+        [jnp.mean(gofr[si][species == s], axis=0) for s in species_types]
+        for si in range(species_types.size)
+      ]
+    )
+
+  # Size must be specified in order to be jit compatible
+  # Note: this returns unique species in sorted order
+  species_types = jnp.unique(species, size=n_species)
+
+  # Same logic as above but statically sized for n_species unique species
   return jnp.array(
     [
-      [jnp.mean(gofr[si][species == s], axis=0) for s in species_types]
+      [
+        jnp.sum(
+          jnp.where(
+            (species == s).repeat(gofr[si].shape[1]).reshape((gofr[si].shape)),
+            gofr[si],
+            0,
+          ),
+          axis=0,
+        )
+        / jnp.count_nonzero(species == s)
+        for s in species_types
+      ]
       for si in range(species_types.size)
     ]
   )
@@ -431,7 +457,9 @@ def pair_correlation(
         mask_s = mask[:, species == s, jnp.newaxis]
         g_R += [jnp.sum(mask_s * pairwise(d(Rs, R), dim), axis=(1,))]
       if compute_average:
-        g_R = average_pair_correlation_results(g_R, species)
+        g_R = average_pair_correlation_results(
+          g_R, species, n_species=species_types
+        )
       return g_R
 
   return g_fn
@@ -583,7 +611,9 @@ def pair_correlation_neighbor_list(
         )
 
       if compute_average:
-        g_R = average_pair_correlation_results(g_R, species)
+        g_R = average_pair_correlation_results(
+          g_R, species, n_species=species_types
+        )
       return g_R
 
   return neighbor_fn, g_fn
