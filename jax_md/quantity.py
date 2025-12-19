@@ -400,9 +400,12 @@ def pair_correlation(
       A function that computes the displacement or distance between two points.
     radii: An array of radii at which we would like to compute :math:`g(r)`.
     sigima: A float specifying the width of the approximating Gaussian.
-    species: An optional array specifying the species of each particle. If
-      species is None then we compute a single :math:`g(r)` for all particles,
-      otherwise we compute one :math:`g(r)` for each species.
+    species: An array specifying the species of each particle or an
+      integer specifying the number of unique species. If species is None
+      then we compute a single :math:`g(r)` for all particles; if species is
+      an array we compute one :math:`g(r)` for each species; and if species
+      is an integer, an integer `species` ndarray of shape `[n]` is supplied
+      dynamically as an argument to `g_fn`.
     eps: A small additive constant used to ensure stability if the radius is
       zero.
 
@@ -518,9 +521,12 @@ def pair_correlation_neighbor_list(
     box_size: The size of the box containing the particles.
     radii: An array of radii at which we would like to compute :math:`g(r)`.
     sigima: A float specifying the width of the approximating Gaussian.
-    species: An optional array specifying the species of each particle. If
-      species is None then we compute a single :math:`g(r)` for all particles,
-      otherwise we compute one :math:`g(r)` for each species.
+    species: An array specifying the species of each particle or an
+      integer specifying the number of unique species. If species is None
+      then we compute a single :math:`g(r)` for all particles; if species is
+      an array we compute one :math:`g(r)` for each species; and if species
+      is an integer, an integer `species` ndarray of shape `[n]` is supplied
+      dynamically as an argument to `g_fn`.
     dr_threshold: A float specifying the halo size of the neighbor list.
     eps: A small additive constant used to ensure stability if the radius is
       zero.
