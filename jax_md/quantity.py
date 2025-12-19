@@ -443,9 +443,8 @@ def pair_correlation(
       if compute_average:
         g_R = average_pair_correlation_results(g_R, species)
       return g_R
-  else:
-    if not (isinstance(species, jnp.ndarray) and is_integer(species)):
-      raise TypeError('Malformed species; expecting array of integers.')
+
+  elif util.is_array(species):
     species_types = jnp.unique(species)
 
     def g_fn(R):
@@ -461,6 +460,27 @@ def pair_correlation(
           g_R, species, n_species=species_types
         )
       return g_R
+
+  elif is_integer(species):
+    species_types = species
+
+    def g_fn(R, species):
+      dim = R.shape[-1]
+      g_R = []
+      mask = 1 - jnp.eye(R.shape[0], dtype=R.dtype)
+      for s in species_types:
+        Rs = R[species == s]
+        mask_s = mask[:, species == s, jnp.newaxis]
+        g_R += [jnp.sum(mask_s * pairwise(d(Rs, R), dim), axis=(1,))]
+      if compute_average:
+        g_R = average_pair_correlation_results(
+          g_R, species, n_species=species_types
+        )
+      return g_R
+
+  else:
+    if not (isinstance(species, jnp.ndarray) and is_integer(species)):
+      raise TypeError('Malformed species; expecting array of integers.')
 
   return g_fn
 
@@ -571,9 +591,7 @@ def pair_correlation_neighbor_list(
           'OrderedSparse neighbor lists.'
         )
 
-  else:
-    if not (isinstance(species, jnp.ndarray) and is_integer(species)):
-      raise TypeError('Malformed species; expecting array of integers.')
+  elif util.is_array(species):
     species_types = jnp.unique(species)
 
     def g_fn(R, neighbor):
@@ -609,12 +627,57 @@ def pair_correlation_neighbor_list(
           'Pair correlation function does not support '
           'OrderedSparse neighbor lists.'
         )
-
       if compute_average:
         g_R = average_pair_correlation_results(
           g_R, species, n_species=species_types
         )
       return g_R
+
+  elif is_integer(species):
+    species_types = species
+
+    def g_fn(R, neighbor, species):
+      N, dim = R.shape
+      g_R = []
+      mask = partition.neighbor_list_mask(neighbor)
+      if neighbor.format is partition.Dense:
+        neighbor_species = species[neighbor.idx]
+        R_neigh = R[neighbor.idx]
+        d = space.map_neighbor(metric)
+        _pairwise = vmap(vmap(pairwise, (0, None)), (0, None))
+        for s in species_types:
+          mask_s = mask * (neighbor_species == s)
+          g_R += [
+            jnp.sum(
+              mask_s[:, :, jnp.newaxis] * _pairwise(d(R, R_neigh), dim),
+              axis=(1,),
+            )
+          ]
+      elif neighbor.format is partition.Sparse:
+        neighbor_species = species[neighbor.idx[1]]
+        dr = space.map_bond(metric)(R[neighbor.idx[0]], R[neighbor.idx[1]])
+        _pairwise = vmap(pairwise, (0, None))
+        for s in species_types:
+          mask_s = mask * (neighbor_species == s)
+          g_R += [
+            ops.segment_sum(
+              mask_s[:, None] * _pairwise(dr, dim), neighbor.idx[0], N
+            )
+          ]
+      else:
+        raise NotImplementedError(
+          'Pair correlation function does not support '
+          'OrderedSparse neighbor lists.'
+        )
+      if compute_average:
+        g_R = average_pair_correlation_results(
+          g_R, species, n_species=species_types
+        )
+      return g_R
+
+  else:
+    if not (isinstance(species, jnp.ndarray) and is_integer(species)):
+      raise TypeError('Malformed species; expecting array of integers.')
 
   return neighbor_fn, g_fn
 
